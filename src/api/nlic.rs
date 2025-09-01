@@ -76,7 +76,7 @@ impl NlicClient {
     }
 
     /// Parse NLIC search response
-    fn parse_search_response(&self, raw: NlicSearchResponse) -> SearchResponse {
+    fn parse_search_response(&self, raw: NlicSearchResponse, requested_page: u32) -> SearchResponse {
         // Handle nested structure or direct structure
         let (laws, total_count, page_no, page_size) = if let Some(search_data) = raw.law_search {
             // New nested structure - parse strings to numbers
@@ -127,7 +127,7 @@ impl NlicClient {
 
         SearchResponse {
             total_count,
-            page_no,
+            page_no: requested_page,  // Use the requested page number, not the API's offset
             page_size,
             items,
             source: "NLIC".to_string(),
@@ -143,12 +143,18 @@ impl LegalApiClient for NlicClient {
             return Err(WarpError::NoApiKey);
         }
 
+        // Calculate the starting position (offset) for the API
+        // The API seems to expect an offset rather than a page number
+        // For page 1 with size 10, offset should be 1
+        // For page 2 with size 10, offset should be 11
+        let offset = ((request.page_no - 1) * request.page_size) + 1;
+        
         let mut params = vec![
             ("OC", self.config.api_key.clone()),
             ("target", "law".to_string()),
             ("type", "JSON".to_string()),
             ("query", request.query.clone()),
-            ("page", request.page_no.to_string()),
+            ("page", offset.to_string()),  // Use offset instead of page number
             ("display", request.page_size.to_string()),
         ];
 
@@ -166,6 +172,7 @@ impl LegalApiClient for NlicClient {
         // Build URL with query parameters
         let url = reqwest::Url::parse_with_params(SEARCH_URL, &params)
             .map_err(|e| WarpError::Parse(e.to_string()))?;
+        
 
         let response = self.execute_with_retry(url.to_string()).await?;
         
@@ -216,7 +223,7 @@ impl LegalApiClient for NlicClient {
                 }
             })?;
 
-        Ok(self.parse_search_response(raw))
+        Ok(self.parse_search_response(raw, request.page_no))
     }
 
     async fn get_detail(&self, id: &str) -> Result<LawDetail> {

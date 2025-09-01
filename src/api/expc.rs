@@ -68,7 +68,7 @@ impl ExpcClient {
     }
     
     /// Parse EXPC search response
-    fn parse_search_response(&self, raw: ExpcSearchResponse) -> SearchResponse {
+    fn parse_search_response(&self, raw: ExpcSearchResponse, requested_page: u32) -> SearchResponse {
         let (interpretations, total_count, page_no, page_size) = if let Some(search_data) = raw.expc_search {
             (
                 search_data.interpretations,
@@ -110,7 +110,7 @@ impl ExpcClient {
         
         SearchResponse {
             total_count,
-            page_no,
+            page_no: requested_page,  // Use the requested page number
             page_size,
             items,
             source: "EXPC".to_string(),
@@ -126,12 +126,15 @@ impl LegalApiClient for ExpcClient {
             return Err(WarpError::NoApiKey);
         }
         
+        // Calculate the starting position (offset) for the API
+        let offset = ((request.page_no - 1) * request.page_size) + 1;
+        
         let mut params = vec![
             ("OC", self.config.api_key.clone()),
             ("target", "expc".to_string()),
             ("type", "JSON".to_string()),
             ("query", request.query.clone()),
-            ("page", request.page_no.to_string()),
+            ("page", offset.to_string()),  // Use offset instead of page number
             ("display", request.page_size.to_string()),
         ];
         
@@ -194,7 +197,7 @@ impl LegalApiClient for ExpcClient {
                 }
             })?;
         
-        Ok(self.parse_search_response(raw))
+        Ok(self.parse_search_response(raw, request.page_no))
     }
     
     async fn get_detail(&self, id: &str) -> Result<LawDetail> {

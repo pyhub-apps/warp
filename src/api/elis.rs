@@ -68,7 +68,7 @@ impl ElisClient {
     }
     
     /// Parse ELIS search response
-    fn parse_search_response(&self, raw: ElisSearchResponse) -> SearchResponse {
+    fn parse_search_response(&self, raw: ElisSearchResponse, requested_page: u32) -> SearchResponse {
         let laws = if let Some(search_data) = raw.law_search {
             search_data.laws
         } else {
@@ -97,7 +97,7 @@ impl ElisClient {
         
         SearchResponse {
             total_count: raw.total_count.unwrap_or(0),
-            page_no: raw.page_no.unwrap_or(1),
+            page_no: requested_page,  // Use the requested page number
             page_size: raw.page_size.unwrap_or(50),
             items,
             source: "ELIS".to_string(),
@@ -113,12 +113,15 @@ impl LegalApiClient for ElisClient {
             return Err(WarpError::NoApiKey);
         }
         
+        // Calculate the starting position (offset) for the API
+        let offset = ((request.page_no - 1) * request.page_size) + 1;
+        
         let mut params = vec![
             ("OC", self.config.api_key.clone()),
             ("target", "law".to_string()),
             ("type", "JSON".to_string()),
             ("query", request.query.clone()),
-            ("page", request.page_no.to_string()),
+            ("page", offset.to_string()),  // Use offset instead of page number
             ("display", request.page_size.to_string()),
         ];
         
@@ -132,6 +135,7 @@ impl LegalApiClient for ElisClient {
         
         let url = reqwest::Url::parse_with_params(SEARCH_URL, &params)
             .map_err(|e| WarpError::Parse(e.to_string()))?;
+        
         
         let response = self.execute_with_retry(url.to_string()).await?;
         
@@ -154,7 +158,7 @@ impl LegalApiClient for ElisClient {
                 WarpError::Parse(format!("Failed to parse ELIS response: {}", e))
             })?;
         
-        Ok(self.parse_search_response(raw))
+        Ok(self.parse_search_response(raw, request.page_no))
     }
     
     async fn get_detail(&self, id: &str) -> Result<LawDetail> {
