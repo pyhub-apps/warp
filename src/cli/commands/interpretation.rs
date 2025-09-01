@@ -1,3 +1,5 @@
+use crate::progress::{ProgressManager};
+use std::sync::Arc;
 use crate::api::{ApiClientFactory, ApiType};
 use crate::api::client::ClientConfig;
 use crate::api::types::UnifiedSearchRequest;
@@ -8,7 +10,7 @@ use crate::error::Result;
 use crate::output::formatter::Formatter;
 
 /// Execute interpretation (legal interpretation) command
-pub async fn execute(args: InterpretationArgs, format: OutputFormat) -> Result<()> {
+pub async fn execute(args: InterpretationArgs, format: OutputFormat, quiet: bool, verbose: bool) -> Result<()> {
     let config = Config::load()?;
     
     // Check for API key

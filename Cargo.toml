@@ -44,6 +44,7 @@ comfy-table = "7.1"
 colored = "2.1"
 termion = "4.0"
 csv = "1.3"
+indicatif = "0.17"
 
 # Error Handling
 thiserror = "1.0"

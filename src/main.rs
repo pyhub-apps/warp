@@ -1,10 +1,5 @@
-mod api;
-mod cli;
-mod config;
-mod error;
-mod output;
-
-use error::Result;
+use warp::cli;
+use warp::error::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {

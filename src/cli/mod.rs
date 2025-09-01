@@ -19,6 +19,10 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
+    /// Disable progress indicators
+    #[arg(short, long, global = true)]
+    pub quiet: bool,
+
     /// Output format
     #[arg(short, long, global = true, value_enum, default_value = "table")]
     pub format: OutputFormat,
@@ -110,12 +114,12 @@ impl Cli {
         }
         
         let result = match cli.command {
-            Commands::Law(args) => commands::law::execute(args, cli.format).await,
-            Commands::Ordinance(args) => commands::ordinance::execute(args, cli.format).await,
-            Commands::Precedent(args) => commands::precedent::execute(args, cli.format).await,
-            Commands::Admrule(args) => commands::admrule::execute(args, cli.format).await,
-            Commands::Interpretation(args) => commands::interpretation::execute(args, cli.format).await,
-            Commands::Search(args) => commands::search::execute(args, cli.format).await,
+            Commands::Law(args) => commands::law::execute(args, cli.format, cli.quiet, cli.verbose).await,
+            Commands::Ordinance(args) => commands::ordinance::execute(args, cli.format, cli.quiet, cli.verbose).await,
+            Commands::Precedent(args) => commands::precedent::execute(args, cli.format, cli.quiet, cli.verbose).await,
+            Commands::Admrule(args) => commands::admrule::execute(args, cli.format, cli.quiet, cli.verbose).await,
+            Commands::Interpretation(args) => commands::interpretation::execute(args, cli.format, cli.quiet, cli.verbose).await,
+            Commands::Search(args) => commands::search::execute(args, cli.format, cli.quiet, cli.verbose).await,
             Commands::Config(args) => commands::config::execute(args).await,
             Commands::Version => {
                 commands::version::execute();
