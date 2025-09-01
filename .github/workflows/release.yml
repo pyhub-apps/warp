@@ -1,0 +1,348 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Building release for version: ${VERSION}"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, including all commits"
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            echo "Generating changelog from $PREV_TAG to ${{ steps.get_version.outputs.version }}"
+            COMMITS=$(git log ${PREV_TAG}..${{ steps.get_version.outputs.version }} --pretty=format:"- %s (%h)")
+          fi
+          
+          # Create changelog file
+          cat > CHANGELOG.md << EOF
+          ## What's Changed
+          
+          ${COMMITS}
+          
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ steps.get_version.outputs.version }}
+          EOF
+          
+          # Output for release body
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat CHANGELOG.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## Installation
+            
+            ### Quick Install (Unix-like systems)
+            ```bash
+            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/install.sh | sh
+            ```
+            
+            ### Manual Installation
+            Download the appropriate binary for your platform from the assets below.
+            
+            #### macOS (Apple Silicon)
+            ```bash
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-aarch64-apple-darwin.tar.gz
+            tar -xzf warp-aarch64-apple-darwin.tar.gz
+            sudo mv warp /usr/local/bin/
+            ```
+            
+            #### macOS (Intel)
+            ```bash
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-apple-darwin.tar.gz
+            tar -xzf warp-x86_64-apple-darwin.tar.gz
+            sudo mv warp /usr/local/bin/
+            ```
+            
+            #### Linux (x86_64)
+            ```bash
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-unknown-linux-gnu.tar.gz
+            tar -xzf warp-x86_64-unknown-linux-gnu.tar.gz
+            sudo mv warp /usr/local/bin/
+            ```
+            
+            #### Windows (x86_64)
+            Download `warp-x86_64-pc-windows-msvc.zip` and extract to a directory in your PATH.
+            
+            ### Verify Installation
+            ```bash
+            warp --version
+            ```
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+
+  build-release:
+    name: Build Release
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          # macOS builds
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            archive: tar.gz
+            
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar.gz
+            
+          # Linux builds
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+            
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            archive: tar.gz
+            use_cross: true
+            
+          # Windows builds
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+            
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            archive: zip
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.use_cross == true
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-cargo-
+
+      - name: Build release binary
+        run: |
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+        shell: bash
+
+      - name: Prepare binary
+        run: |
+          cd target/${{ matrix.target }}/release
+          
+          # Strip binary on Unix-like systems
+          if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
+            strip warp || true
+          fi
+          
+          # Create archive directory
+          mkdir -p ../../../archive
+          
+          # Copy binary
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp warp.exe ../../../archive/
+          else
+            cp warp ../../../archive/
+          fi
+          
+          # Copy additional files
+          cd ../../..
+          cp README.md archive/
+          if [ -f LICENSE ]; then cp LICENSE archive/; fi
+        shell: bash
+
+      - name: Create archive
+        run: |
+          cd archive
+          
+          if [[ "${{ matrix.archive }}" == "tar.gz" ]]; then
+            tar -czf ../warp-${{ matrix.target }}.tar.gz *
+          else
+            # Windows zip
+            powershell Compress-Archive -Path * -DestinationPath ../warp-${{ matrix.target }}.zip
+          fi
+        shell: bash
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./warp-${{ matrix.target }}.${{ matrix.archive }}
+          asset_name: warp-${{ matrix.target }}.${{ matrix.archive }}
+          asset_content_type: application/octet-stream
+
+  checksums:
+    name: Generate Checksums
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          REPO="${{ github.repository }}"
+          
+          # Download all release assets
+          for target in x86_64-apple-darwin aarch64-apple-darwin x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
+            curl -LO "https://github.com/${REPO}/releases/download/${VERSION}/warp-${target}.tar.gz"
+          done
+          
+          for target in x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
+            curl -LO "https://github.com/${REPO}/releases/download/${VERSION}/warp-${target}.zip"
+          done
+
+      - name: Generate checksums
+        run: |
+          sha256sum warp-*.{tar.gz,zip} > checksums.txt
+          cat checksums.txt
+
+      - name: Upload checksums
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./checksums.txt
+          asset_name: checksums.txt
+          asset_content_type: text/plain
+
+  create-install-script:
+    name: Create Install Script
+    needs: create-release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Create install script
+        run: |
+          cat > install.sh << 'EOF'
+          #!/bin/sh
+          set -e
+          
+          VERSION="${{ needs.create-release.outputs.version }}"
+          REPO="${{ github.repository }}"
+          
+          # Detect OS and architecture
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
+          
+          # Map to Rust target triple
+          case "$OS" in
+              linux)
+                  OS_TARGET="unknown-linux-gnu"
+                  ;;
+              darwin)
+                  OS_TARGET="apple-darwin"
+                  ;;
+              *)
+                  echo "Unsupported OS: $OS"
+                  exit 1
+                  ;;
+          esac
+          
+          case "$ARCH" in
+              x86_64)
+                  ARCH_TARGET="x86_64"
+                  ;;
+              aarch64|arm64)
+                  ARCH_TARGET="aarch64"
+                  ;;
+              *)
+                  echo "Unsupported architecture: $ARCH"
+                  exit 1
+                  ;;
+          esac
+          
+          TARGET="${ARCH_TARGET}-${OS_TARGET}"
+          URL="https://github.com/${REPO}/releases/download/${VERSION}/warp-${TARGET}.tar.gz"
+          
+          echo "Downloading warp ${VERSION} for ${TARGET}..."
+          curl -fsSL "$URL" | tar -xz
+          
+          echo "Installing to /usr/local/bin..."
+          sudo mv warp /usr/local/bin/
+          
+          echo "Installation complete! Run 'warp --version' to verify."
+          EOF
+          
+          chmod +x install.sh
+
+      - name: Upload install script
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./install.sh
+          asset_name: install.sh
+          asset_content_type: text/plain
