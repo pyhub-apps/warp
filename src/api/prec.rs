@@ -11,7 +11,7 @@ use super::client::ClientConfig;
 use super::deserializers::{single_or_vec, single_or_vec_or_null};
 use super::types::{LawDetail, LawHistory, SearchItem, SearchResponse, UnifiedSearchRequest};
 use super::{ApiType, LegalApiClient};
-use crate::cache::key::CacheKeyGenerator;
+use crate::cache::key::{CacheKeyGenerator, PrecKeyParams};
 use crate::error::{Result, WarpError};
 
 const BASE_URL: &str = "https://www.law.go.kr/DRF/lawSearch.do";
@@ -212,16 +212,16 @@ impl LegalApiClient for PrecClient {
         }
 
         // Generate cache key for this PREC search request
-        let cache_key = CacheKeyGenerator::prec_key(
-            "search",
-            Some(&request.query),
-            request.extras.get("court").map(|s| s.as_str()),
-            request.extras.get("case_type").map(|s| s.as_str()),
-            request.date_from.as_deref(),
-            request.date_to.as_deref(),
-            Some(request.page_no),
-            Some(request.page_size),
-        );
+        let cache_key = CacheKeyGenerator::prec_key(PrecKeyParams {
+            endpoint: "search",
+            query: Some(&request.query),
+            court: request.extras.get("court").map(|s| s.as_str()),
+            case_type: request.extras.get("case_type").map(|s| s.as_str()),
+            date_from: request.date_from.as_deref(),
+            date_to: request.date_to.as_deref(),
+            page: Some(request.page_no),
+            size: Some(request.page_size),
+        });
 
         // Check cache first
         if let Some(cached_response) = self.check_search_cache(&cache_key).await? {

@@ -7,6 +7,8 @@ pub mod nlic;
 pub mod prec;
 pub mod types;
 
+use std::str::FromStr;
+
 pub use client::{ApiClientFactory, LegalApiClient};
 
 /// API types supported by the CLI
@@ -26,21 +28,24 @@ pub enum ApiType {
     All,
 }
 
-impl ApiType {
-    #[allow(dead_code)]
-    pub fn from_str(s: &str) -> Option<Self> {
+impl FromStr for ApiType {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "nlic" | "law" => Some(Self::Nlic),
-            "elis" | "ordinance" => Some(Self::Elis),
-            "prec" | "precedent" => Some(Self::Prec),
-            "admrul" | "administrative" => Some(Self::Admrul),
-            "expc" | "interpretation" => Some(Self::Expc),
-            "all" | "unified" => Some(Self::All),
-            _ => None,
+            "nlic" | "law" => Ok(Self::Nlic),
+            "elis" | "ordinance" => Ok(Self::Elis),
+            "prec" | "precedent" => Ok(Self::Prec),
+            "admrul" | "administrative" => Ok(Self::Admrul),
+            "expc" | "interpretation" => Ok(Self::Expc),
+            "all" | "unified" => Ok(Self::All),
+            _ => Err(format!("Unknown API type: {}", s)),
         }
     }
+}
 
-    #[allow(dead_code)]
+impl ApiType {
+
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Nlic => "nlic",

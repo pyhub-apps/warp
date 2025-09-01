@@ -122,7 +122,7 @@ impl SqliteStorage {
             let entry = stmt
                 .query_row(params![&key_owned], |row| {
                     let api_type_str: String = row.get(4)?;
-                    let api_type = ApiType::from_str(&api_type_str).ok_or_else(|| {
+                    let api_type = api_type_str.parse::<ApiType>().map_err(|_| {
                         rusqlite::Error::InvalidColumnType(
                             4,
                             "api_type".to_string(),
@@ -436,7 +436,7 @@ impl SqliteStorage {
             let rows = stmt
                 .query_map(params![api_type.as_str()], |row| {
                     let api_type_str: String = row.get(4)?;
-                    let api_type = ApiType::from_str(&api_type_str).ok_or_else(|| {
+                    let api_type = api_type_str.parse::<ApiType>().map_err(|_| {
                         rusqlite::Error::InvalidColumnType(
                             4,
                             "api_type".to_string(),

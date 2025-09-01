@@ -6,6 +6,17 @@ use crate::api::types::{LawDetail, LawHistory, SearchResponse};
 use crate::cli::OutputFormat;
 use crate::error::Result;
 
+/// Manual div_ceil implementation for MSRV 1.70.0 compatibility
+/// Can be replaced with u32::div_ceil when MSRV is increased to 1.73.0+
+#[inline]
+#[allow(clippy::manual_div_ceil)]
+fn div_ceil(dividend: u32, divisor: u32) -> u32 {
+    if divisor == 0 {
+        panic!("Division by zero");
+    }
+    (dividend + divisor - 1) / divisor
+}
+
 pub struct Formatter {
     format: OutputFormat,
 }
@@ -69,10 +80,10 @@ impl Formatter {
 
             table.add_row(vec![
                 Cell::new(&row_num),
-                Cell::new(&truncate_string(&item.title, 40)),
+                Cell::new(truncate_string(&item.title, 40)),
                 Cell::new(item.law_no.as_deref().unwrap_or("-")),
                 Cell::new(item.law_type.as_deref().unwrap_or("-")),
-                Cell::new(&truncate_string(
+                Cell::new(truncate_string(
                     item.department.as_deref().unwrap_or("-"),
                     20,
                 )),
@@ -91,7 +102,7 @@ impl Formatter {
             "📊".cyan(),
             response.total_count.to_string().yellow(),
             response.page_no.to_string().yellow(),
-            ((response.total_count + response.page_size - 1) / response.page_size)
+            div_ceil(response.total_count, response.page_size)
                 .to_string()
                 .yellow(),
             response.items.len().to_string().yellow()
@@ -167,11 +178,11 @@ impl Formatter {
 
         for entry in &history.entries {
             table.add_row(vec![
-                Cell::new(&entry.revision_no.to_string()),
-                Cell::new(&entry.revision_date),
+                Cell::new(entry.revision_no.to_string()),
+                Cell::new(entry.revision_date.clone()),
                 Cell::new(entry.enforcement_date.as_deref().unwrap_or("-")),
-                Cell::new(&entry.revision_type),
-                Cell::new(&truncate_string(entry.reason.as_deref().unwrap_or("-"), 40)),
+                Cell::new(entry.revision_type.clone()),
+                Cell::new(truncate_string(entry.reason.as_deref().unwrap_or("-"), 40)),
             ]);
         }
 
@@ -189,15 +200,15 @@ impl Formatter {
     // JSON formatting methods
     fn format_search_json(&self, response: &SearchResponse) -> Result<String> {
         serde_json::to_string_pretty(response)
-            .map_err(|e| crate::error::WarpError::Serialization(e))
+            .map_err(crate::error::WarpError::Serialization)
     }
 
     fn format_detail_json(&self, detail: &LawDetail) -> Result<String> {
-        serde_json::to_string_pretty(detail).map_err(|e| crate::error::WarpError::Serialization(e))
+        serde_json::to_string_pretty(detail).map_err(crate::error::WarpError::Serialization)
     }
 
     fn format_history_json(&self, history: &LawHistory) -> Result<String> {
-        serde_json::to_string_pretty(history).map_err(|e| crate::error::WarpError::Serialization(e))
+        serde_json::to_string_pretty(history).map_err(crate::error::WarpError::Serialization)
     }
 
     // Markdown formatting methods
@@ -209,7 +220,7 @@ impl Formatter {
         result.push_str(&format!(
             "- **페이지**: {}/{}\n",
             response.page_no,
-            (response.total_count + response.page_size - 1) / response.page_size
+            div_ceil(response.total_count, response.page_size)
         ));
         result.push_str(&format!("- **출처**: {}\n\n", response.source));
 
@@ -324,7 +335,7 @@ impl Formatter {
             "<p>총 {}건 | 페이지 {}/{}</p>\n",
             response.total_count,
             response.page_no,
-            (response.total_count + response.page_size - 1) / response.page_size
+            div_ceil(response.total_count, response.page_size)
         ));
 
         html.push_str("<table>\n<thead>\n<tr>\n");

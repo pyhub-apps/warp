@@ -53,7 +53,7 @@ pub async fn execute(
         &format!("{}개 API에서 '{}' 검색 중", total_apis, args.query),
     );
 
-    for (_idx, api_type) in api_types.into_iter().enumerate() {
+    for api_type in api_types.into_iter() {
         let api_key = match api_type {
             ApiType::Nlic => config.get_nlic_api_key(),
             ApiType::Elis => config.get_elis_api_key(),
@@ -190,7 +190,7 @@ fn parse_source(source: &str) -> Vec<ApiType> {
             // Parse comma-separated list
             sources
                 .split(',')
-                .filter_map(|s| ApiType::from_str(s.trim()))
+                .filter_map(|s| s.trim().parse::<ApiType>().ok())
                 .collect()
         }
     }

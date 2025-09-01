@@ -10,6 +10,18 @@ use crate::output;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+/// Parameters for precedent search operation
+struct SearchParams {
+    query: String,
+    page: u32,
+    size: u32,
+    court: Option<String>,
+    case_type: Option<String>,
+    date_from: Option<String>,
+    date_to: Option<String>,
+    format: OutputFormat,
+}
+
 /// Execute precedent command (판례)
 pub async fn execute(
     args: PrecedentArgs,
@@ -49,8 +61,7 @@ pub async fn execute(
     // Handle direct query or subcommand
     match args.command {
         Some(PrecedentCommand::Search { query, page, size }) => {
-            search_precedents(
-                client.as_ref(),
+            let params = SearchParams {
                 query,
                 page,
                 size,
@@ -59,8 +70,8 @@ pub async fn execute(
                 date_from,
                 date_to,
                 format,
-            )
-            .await
+            };
+            search_precedents(client.as_ref(), params).await
         }
         Some(PrecedentCommand::Detail { id }) => {
             get_precedent_detail(client.as_ref(), id, format).await
@@ -68,18 +79,17 @@ pub async fn execute(
         None => {
             // Direct query without subcommand
             if let Some(query) = args.query {
-                search_precedents(
-                    client.as_ref(),
+                let params = SearchParams {
                     query,
-                    args.page,
-                    args.size,
+                    page: args.page,
+                    size: args.size,
                     court,
                     case_type,
                     date_from,
                     date_to,
                     format,
-                )
-                .await
+                };
+                search_precedents(client.as_ref(), params).await
             } else {
                 Err(WarpError::InvalidInput(
                     "No search query provided. Use 'warp precedent <query>' or 'warp precedent search <query>'".to_string()
@@ -89,38 +99,28 @@ pub async fn execute(
     }
 }
 
-async fn search_precedents(
-    client: &dyn LegalApiClient,
-    query: String,
-    page: u32,
-    size: u32,
-    court: Option<String>,
-    case_type: Option<String>,
-    date_from: Option<String>,
-    date_to: Option<String>,
-    format: OutputFormat,
-) -> Result<()> {
-    if query.trim().is_empty() {
+async fn search_precedents(client: &dyn LegalApiClient, params: SearchParams) -> Result<()> {
+    if params.query.trim().is_empty() {
         return Err(WarpError::InvalidInput(
             "Search query cannot be empty".to_string(),
         ));
     }
 
     let mut extras = HashMap::new();
-    if let Some(court) = court {
+    if let Some(court) = params.court {
         extras.insert("court".to_string(), court);
     }
-    if let Some(case_type) = case_type {
+    if let Some(case_type) = params.case_type {
         extras.insert("case_type".to_string(), case_type);
     }
 
     let request = UnifiedSearchRequest {
-        query,
-        page_no: page,
-        page_size: size,
+        query: params.query,
+        page_no: params.page,
+        page_size: params.size,
         response_type: ResponseType::Json,
-        date_from,
-        date_to,
+        date_from: params.date_from,
+        date_to: params.date_to,
         extras,
         ..Default::default()
     };
@@ -132,7 +132,7 @@ async fn search_precedents(
         return Ok(());
     }
 
-    let output = output::format_search_response(&response, format)?;
+    let output = output::format_search_response(&response, params.format)?;
     println!("{}", output);
 
     Ok(())

@@ -2,6 +2,18 @@ use crate::api::ApiType;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
+/// Parameters for PREC cache key generation
+pub struct PrecKeyParams<'a> {
+    pub endpoint: &'a str,
+    pub query: Option<&'a str>,
+    pub court: Option<&'a str>,
+    pub case_type: Option<&'a str>,
+    pub date_from: Option<&'a str>,
+    pub date_to: Option<&'a str>,
+    pub page: Option<u32>,
+    pub size: Option<u32>,
+}
+
 /// Cache key generator for different API types
 pub struct CacheKeyGenerator;
 
@@ -118,41 +130,32 @@ impl CacheKeyGenerator {
     }
 
     /// Generate key for PREC (Precedent) API
-    pub fn prec_key(
-        endpoint: &str,
-        query: Option<&str>,
-        court: Option<&str>,
-        case_type: Option<&str>,
-        date_from: Option<&str>,
-        date_to: Option<&str>,
-        page: Option<u32>,
-        size: Option<u32>,
-    ) -> String {
-        let mut params = HashMap::new();
+    pub fn prec_key(params: PrecKeyParams) -> String {
+        let mut param_map = HashMap::new();
 
-        if let Some(q) = query {
-            params.insert("query".to_string(), q.to_string());
+        if let Some(q) = params.query {
+            param_map.insert("query".to_string(), q.to_string());
         }
-        if let Some(c) = court {
-            params.insert("court".to_string(), c.to_string());
+        if let Some(c) = params.court {
+            param_map.insert("court".to_string(), c.to_string());
         }
-        if let Some(ct) = case_type {
-            params.insert("case_type".to_string(), ct.to_string());
+        if let Some(ct) = params.case_type {
+            param_map.insert("case_type".to_string(), ct.to_string());
         }
-        if let Some(df) = date_from {
-            params.insert("date_from".to_string(), df.to_string());
+        if let Some(df) = params.date_from {
+            param_map.insert("date_from".to_string(), df.to_string());
         }
-        if let Some(dt) = date_to {
-            params.insert("date_to".to_string(), dt.to_string());
+        if let Some(dt) = params.date_to {
+            param_map.insert("date_to".to_string(), dt.to_string());
         }
-        if let Some(p) = page {
-            params.insert("page".to_string(), p.to_string());
+        if let Some(p) = params.page {
+            param_map.insert("page".to_string(), p.to_string());
         }
-        if let Some(s) = size {
-            params.insert("size".to_string(), s.to_string());
+        if let Some(s) = params.size {
+            param_map.insert("size".to_string(), s.to_string());
         }
 
-        Self::generate_key(ApiType::Prec, endpoint, &params, None)
+        Self::generate_key(ApiType::Prec, params.endpoint, &param_map, None)
     }
 
     /// Generate key for ADMRUL (Administrative Rule) API
@@ -246,7 +249,7 @@ impl CacheKeyGenerator {
         // Expected format: "api_type:hash"
         if let Some((api_part, hash_part)) = key.split_once(':') {
             // Check if API type is valid
-            if ApiType::from_str(api_part).is_none() {
+            if api_part.parse::<ApiType>().is_err() {
                 return false;
             }
 
@@ -260,7 +263,7 @@ impl CacheKeyGenerator {
     /// Extract API type from cache key
     pub fn extract_api_type(key: &str) -> Option<ApiType> {
         if let Some((api_part, _)) = key.split_once(':') {
-            ApiType::from_str(api_part)
+            api_part.parse::<ApiType>().ok()
         } else {
             None
         }

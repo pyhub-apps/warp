@@ -134,7 +134,7 @@ fn detect_from_parent_process() -> Option<DetectedShell> {
 
     // Try using ps command to get parent process name
     let output = Command::new("ps")
-        .args(&["-p", &ppid.to_string(), "-o", "comm="])
+        .args(["-p", &ppid.to_string(), "-o", "comm="])
         .output()
         .ok()?;
 

@@ -10,6 +10,16 @@ use crate::output;
 use crate::progress::{ApiProgress, ProgressManager};
 use std::sync::Arc;
 
+/// Parameters for law search operation
+struct SearchParams {
+    query: String,
+    page: u32,
+    size: u32,
+    law_type: Option<String>,
+    department: Option<String>,
+    format: OutputFormat,
+}
+
 /// Execute law command
 pub async fn execute(
     args: LawArgs,
@@ -50,17 +60,15 @@ pub async fn execute(
     // Handle direct query or subcommand
     match args.command {
         Some(LawCommand::Search { query, page, size }) => {
-            search_laws(
-                client.as_ref(),
+            let params = SearchParams {
                 query,
                 page,
                 size,
                 law_type,
                 department,
                 format,
-                progress_manager,
-            )
-            .await
+            };
+            search_laws(client.as_ref(), params, progress_manager).await
         }
         Some(LawCommand::Detail { id }) => {
             get_law_detail(client.as_ref(), id, format, progress_manager).await
@@ -71,17 +79,15 @@ pub async fn execute(
         None => {
             // Direct query without subcommand
             if let Some(query) = args.query {
-                search_laws(
-                    client.as_ref(),
+                let params = SearchParams {
                     query,
-                    args.page,
-                    args.size,
+                    page: args.page,
+                    size: args.size,
                     law_type,
                     department,
                     format,
-                    progress_manager,
-                )
-                .await
+                };
+                search_laws(client.as_ref(), params, progress_manager).await
             } else {
                 Err(WarpError::InvalidInput(
                     "No search query provided. Use 'warp law <query>' or 'warp law search <query>'"
@@ -94,33 +100,28 @@ pub async fn execute(
 
 async fn search_laws(
     client: &dyn LegalApiClient,
-    query: String,
-    page: u32,
-    size: u32,
-    law_type: Option<String>,
-    department: Option<String>,
-    format: OutputFormat,
+    params: SearchParams,
     progress_manager: Arc<ProgressManager>,
 ) -> Result<()> {
-    if query.trim().is_empty() {
+    if params.query.trim().is_empty() {
         return Err(WarpError::InvalidInput(
             "Search query cannot be empty".to_string(),
         ));
     }
 
     let request = UnifiedSearchRequest {
-        query: query.clone(),
-        page_no: page,
-        page_size: size,
+        query: params.query.clone(),
+        page_no: params.page,
+        page_size: params.size,
         response_type: ResponseType::Json,
-        law_type,
-        department,
+        law_type: params.law_type,
+        department: params.department,
         ..Default::default()
     };
 
     // Show progress while searching
     let progress = ApiProgress::new(progress_manager.clone(), "국가법령정보센터");
-    progress.set_message(&format!("'{}' 검색 중...", query));
+    progress.set_message(&format!("'{}' 검색 중...", params.query));
 
     let response = client.search(request).await?;
 
@@ -131,7 +132,7 @@ async fn search_laws(
         return Ok(());
     }
 
-    let output = output::format_search_response(&response, format)?;
+    let output = output::format_search_response(&response, params.format)?;
     println!("{}", output);
 
     Ok(())

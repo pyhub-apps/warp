@@ -4,11 +4,11 @@ use warp::config::Config;
 
 #[test]
 fn test_api_type_from_str() {
-    assert_eq!(ApiType::from_str("nlic"), Some(ApiType::Nlic));
-    assert_eq!(ApiType::from_str("law"), Some(ApiType::Nlic));
-    assert_eq!(ApiType::from_str("elis"), Some(ApiType::Elis));
-    assert_eq!(ApiType::from_str("ordinance"), Some(ApiType::Elis));
-    assert_eq!(ApiType::from_str("invalid"), None);
+    assert_eq!("nlic".parse::<ApiType>().ok(), Some(ApiType::Nlic));
+    assert_eq!("law".parse::<ApiType>().ok(), Some(ApiType::Nlic));
+    assert_eq!("elis".parse::<ApiType>().ok(), Some(ApiType::Elis));
+    assert_eq!("ordinance".parse::<ApiType>().ok(), Some(ApiType::Elis));
+    assert_eq!("invalid".parse::<ApiType>().ok(), None);
 }
 
 #[test]
