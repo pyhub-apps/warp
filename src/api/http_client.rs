@@ -20,7 +20,6 @@ impl HttpClientPool {
             // Performance optimizations
             .tcp_keepalive(Duration::from_secs(60)) // Keep TCP connections alive
             .tcp_nodelay(true) // Disable Nagle's algorithm for lower latency
-            .http2_prior_knowledge() // Use HTTP/2 when possible
             .use_rustls_tls() // Use rustls for better performance
             .build()
             .expect("Failed to create HTTP client");
@@ -41,7 +40,6 @@ impl HttpClientPool {
             .timeout(timeout)
             .tcp_keepalive(Duration::from_secs(60))
             .tcp_nodelay(true)
-            .http2_prior_knowledge()
             .use_rustls_tls()
             .build()
             .expect("Failed to create HTTP client with custom timeout")
@@ -77,7 +75,6 @@ pub fn create_custom_client(timeout_secs: u64, user_agent: &str) -> Client {
         .user_agent(user_agent)
         .tcp_keepalive(Duration::from_secs(60))
         .tcp_nodelay(true)
-        .http2_prior_knowledge()
         .use_rustls_tls()
         .build()
         .expect("Failed to create custom HTTP client")
