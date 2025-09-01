@@ -38,7 +38,7 @@ fn test_config_path() {
 mod api_tests {
     use super::*;
     use mockito::{Server, Matcher};
-    use warp::api::{ClientConfig, LegalApiClient, nlic::NlicClient};
+    use warp::api::{client::{ClientConfig, LegalApiClient}, nlic::NlicClient};
 
     #[tokio::test]
     async fn test_nlic_client_no_api_key() {

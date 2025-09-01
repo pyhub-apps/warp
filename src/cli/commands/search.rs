@@ -38,9 +38,9 @@ pub async fn execute(args: SearchArgs, format: OutputFormat) -> Result<()> {
         let api_key = match api_type {
             ApiType::Nlic => config.get_nlic_api_key(),
             ApiType::Elis => config.get_elis_api_key(),
-            ApiType::Prec => config.get_nlic_api_key(), // Uses same key as NLIC
-            ApiType::Admrul => config.get_nlic_api_key(), // Uses same key as NLIC
-            ApiType::Expc => config.get_nlic_api_key(), // Uses same key as NLIC
+            ApiType::Prec => config.get_prec_api_key(),
+            ApiType::Admrul => config.get_admrul_api_key(),
+            ApiType::Expc => config.get_expc_api_key(),
             ApiType::All => continue, // Skip, this is handled by selecting all APIs
         };
         

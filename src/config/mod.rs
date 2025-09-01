@@ -20,25 +20,36 @@ pub struct LawConfig {
     pub key: Option<String>,
     
     /// NLIC configuration
-    pub nlic: NlicConfig,
+    #[serde(default)]
+    pub nlic: ApiConfig,
     
     /// ELIS configuration
-    pub elis: ElisConfig,
+    #[serde(default)]
+    pub elis: ApiConfig,
+    
+    /// PREC configuration
+    #[serde(default)]
+    pub prec: ApiConfig,
+    
+    /// ADMRUL configuration
+    #[serde(default)]
+    pub admrul: ApiConfig,
+    
+    /// EXPC configuration
+    #[serde(default)]
+    pub expc: ApiConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct NlicConfig {
-    /// NLIC API key
+pub struct ApiConfig {
+    /// API-specific key
     #[serde(skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ElisConfig {
-    /// ELIS API key
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub key: Option<String>,
-}
+// Backward compatibility type aliases
+pub type NlicConfig = ApiConfig;
+pub type ElisConfig = ApiConfig;
 
 impl Config {
     /// Get the configuration file path
@@ -146,6 +157,36 @@ impl Config {
             .or_else(|| self.law.key.clone())
     }
     
+    /// Get PREC API key (with backward compatibility)
+    pub fn get_prec_api_key(&self) -> Option<String> {
+        self.law.prec.key.clone()
+            .or_else(|| self.law.key.clone())
+    }
+    
+    /// Get ADMRUL API key (with backward compatibility)
+    pub fn get_admrul_api_key(&self) -> Option<String> {
+        self.law.admrul.key.clone()
+            .or_else(|| self.law.key.clone())
+    }
+    
+    /// Get EXPC API key (with backward compatibility)
+    pub fn get_expc_api_key(&self) -> Option<String> {
+        self.law.expc.key.clone()
+            .or_else(|| self.law.key.clone())
+    }
+    
+    /// Get API key for specific API type
+    pub fn get_api_key(&self, api_type: &str) -> Option<String> {
+        match api_type.to_lowercase().as_str() {
+            "nlic" => self.get_nlic_api_key(),
+            "elis" => self.get_elis_api_key(),
+            "prec" => self.get_prec_api_key(),
+            "admrul" => self.get_admrul_api_key(),
+            "expc" => self.get_expc_api_key(),
+            _ => self.law.key.clone(),
+        }
+    }
+    
     /// Set a configuration value by key path
     pub fn set(&mut self, key: &str, value: &str) -> Result<()> {
         match key {
@@ -157,6 +198,15 @@ impl Config {
             }
             "law.elis.key" => {
                 self.law.elis.key = Some(value.to_string());
+            }
+            "law.prec.key" => {
+                self.law.prec.key = Some(value.to_string());
+            }
+            "law.admrul.key" => {
+                self.law.admrul.key = Some(value.to_string());
+            }
+            "law.expc.key" => {
+                self.law.expc.key = Some(value.to_string());
             }
             _ => {
                 return Err(WarpError::Config(format!("Unknown configuration key: {}", key)));
@@ -173,6 +223,9 @@ impl Config {
             "law.key" => self.law.key.clone(),
             "law.nlic.key" => self.law.nlic.key.clone(),
             "law.elis.key" => self.law.elis.key.clone(),
+            "law.prec.key" => self.law.prec.key.clone(),
+            "law.admrul.key" => self.law.admrul.key.clone(),
+            "law.expc.key" => self.law.expc.key.clone(),
             _ => None,
         }
     }
