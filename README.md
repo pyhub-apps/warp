@@ -22,8 +22,8 @@
 ### 소스에서 빌드
 
 ```bash
-git clone https://github.com/pyhub-apps/warp-cli.git
-cd warp-cli
+git clone https://github.com/pyhub-apps/warp.git
+cd warp
 cargo build --release
 
 # 바이너리는 ./target/release/warp 에 생성됩니다
@@ -32,7 +32,7 @@ cargo build --release
 ### Cargo를 통한 설치 (준비 중)
 
 ```bash
-cargo install warp-cli
+cargo install warp
 ```
 
 ## 🚀 빠른 시작
@@ -157,7 +157,7 @@ warp config set law.key NEW_API_KEY
 ## 🏗️ 프로젝트 구조
 
 ```
-warp-cli/
+warp/
 ├── src/
 │   ├── main.rs              # 진입점
 │   ├── lib.rs               # 라이브러리 루트
@@ -288,7 +288,7 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 ## 🔗 관련 프로젝트
 
-- [Go 버전](https://github.com/pyhub-apps/pyhub-warp-cli-golang)
+- [Go 버전](https://github.com/pyhub-apps/warp-golang)
 - [Python 버전](https://github.com/pyhub-kr/pyhub-warp-cli) (원본)
 
 ## 👥 만든 사람
@@ -298,5 +298,5 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 ## 📞 문의
 
-- GitHub Issues: [https://github.com/pyhub-apps/warp-cli/issues](https://github.com/pyhub-apps/warp-cli/issues)
+- GitHub Issues: [https://github.com/pyhub-apps/warp/issues](https://github.com/pyhub-apps/warp/issues)
 - Email: pyhub.kr@gmail.com

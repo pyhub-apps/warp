@@ -50,7 +50,7 @@ impl Default for ClientConfig {
             timeout: 30,
             max_retries: 3,
             retry_base_delay: 100,
-            user_agent: format!("warp-cli/{}", env!("CARGO_PKG_VERSION")),
+            user_agent: format!("warp/{}", env!("CARGO_PKG_VERSION")),
         }
     }
 }

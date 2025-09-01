@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["PyHub Community"]
 description = "Korean Legal Information CLI - Search laws, ordinances, and legal documents from the terminal"
 license = "MIT"
-repository = "https://github.com/pyhub-kr/pyhub-warp-cli"
+repository = "https://github.com/pyhub-apps/warp"
 keywords = ["cli", "legal", "korea", "law", "search"]
 categories = ["command-line-utilities"]
 
