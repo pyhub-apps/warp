@@ -1,5 +1,5 @@
-use serde::{Deserialize, Deserializer};
 use serde::de::{self, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::marker::PhantomData;
 

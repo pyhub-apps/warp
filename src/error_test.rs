@@ -5,12 +5,12 @@ mod tests {
     #[test]
     fn test_no_api_key_error() {
         let error = WarpError::NoApiKey;
-        
+
         // Check error message contains emoji and Korean text
         let msg = error.to_string();
         assert!(msg.contains("🔑"));
         assert!(msg.contains("API 키가 설정되지 않았습니다"));
-        
+
         // Check hint is provided
         let hint = error.hint();
         assert!(hint.is_some());
@@ -23,7 +23,7 @@ mod tests {
     fn test_network_error_message() {
         // Test network error message format without creating actual reqwest::Error
         // The actual network error testing would be done in integration tests
-        
+
         // We can test other network-related error types though
         let error = WarpError::Other("네트워크 연결 실패".to_string());
         let msg = error.to_string();
@@ -37,14 +37,14 @@ mod tests {
             message: "Not found".to_string(),
             hint: Some("자료를 찾을 수 없습니다".to_string()),
         };
-        
+
         // Check error message format
         let msg = error.to_string();
         assert!(msg.contains("⚠️"));
         assert!(msg.contains("API 오류"));
         assert!(msg.contains("404"));
         assert!(msg.contains("Not found"));
-        
+
         // Check custom hint is preserved
         let hint = error.hint();
         assert!(hint.is_some());
@@ -54,12 +54,12 @@ mod tests {
     #[test]
     fn test_rate_limit_error() {
         let error = WarpError::RateLimit;
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("⏳"));
         assert!(msg.contains("요청 한도 초과"));
-        
+
         // Check recovery hint
         let hint = error.hint();
         assert!(hint.is_some());
@@ -71,13 +71,13 @@ mod tests {
     #[test]
     fn test_parse_error() {
         let error = WarpError::Parse("Invalid XML response".to_string());
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("🔍"));
         assert!(msg.contains("응답 파싱 오류"));
         assert!(msg.contains("Invalid XML response"));
-        
+
         // Check hint for XML/JSON errors
         let hint = error.hint();
         assert!(hint.is_some());
@@ -89,13 +89,13 @@ mod tests {
     #[test]
     fn test_invalid_input_error() {
         let error = WarpError::InvalidInput("페이지 번호는 1 이상이어야 합니다".to_string());
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("❌"));
         assert!(msg.contains("잘못된 입력"));
         assert!(msg.contains("페이지 번호"));
-        
+
         // Check hint
         let hint = error.hint();
         assert!(hint.is_some());
@@ -107,13 +107,13 @@ mod tests {
     #[test]
     fn test_server_error() {
         let error = WarpError::ServerError("503 Service Unavailable".to_string());
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("🚨"));
         assert!(msg.contains("서버 오류"));
         assert!(msg.contains("503"));
-        
+
         // Check recovery hint
         let hint = error.hint();
         assert!(hint.is_some());
@@ -124,17 +124,15 @@ mod tests {
 
     #[test]
     fn test_io_error_permission_denied() {
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::PermissionDenied,
-            "Permission denied"
-        );
+        let io_error =
+            std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Permission denied");
         let error = WarpError::Io(io_error);
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("💾"));
         assert!(msg.contains("파일 시스템 오류"));
-        
+
         // Check permission-specific hint
         let hint = error.hint();
         assert!(hint.is_some());
@@ -145,12 +143,9 @@ mod tests {
 
     #[test]
     fn test_io_error_not_found() {
-        let io_error = std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "File not found"
-        );
+        let io_error = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
         let error = WarpError::Io(io_error);
-        
+
         // Check hint for not found error
         let hint = error.hint();
         assert!(hint.is_some());
@@ -162,7 +157,7 @@ mod tests {
     #[test]
     fn test_config_error() {
         let error = WarpError::Config("Invalid configuration format".to_string());
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("⚙️"));
@@ -173,13 +168,13 @@ mod tests {
     #[test]
     fn test_authentication_failed() {
         let error = WarpError::AuthenticationFailed("Invalid API key".to_string());
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("🔐"));
         assert!(msg.contains("인증 실패"));
         assert!(msg.contains("Invalid API key"));
-        
+
         // Check authentication-specific hint
         let hint = error.hint();
         assert!(hint.is_some());
@@ -196,7 +191,7 @@ mod tests {
         assert!(WarpError::Timeout(30).is_retryable());
         assert!(WarpError::ServerError("503".to_string()).is_retryable());
         assert!(WarpError::RateLimit.is_retryable());
-        
+
         // Non-retryable errors
         assert!(!WarpError::NoApiKey.is_retryable());
         assert!(!WarpError::InvalidInput("bad input".to_string()).is_retryable());
@@ -207,13 +202,13 @@ mod tests {
     #[test]
     fn test_not_found_error() {
         let error = WarpError::NotFound("법령 ID 12345".to_string());
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("🔎"));
         assert!(msg.contains("찾을 수 없음"));
         assert!(msg.contains("법령 ID 12345"));
-        
+
         // Check hint with specific item
         let hint = error.hint();
         assert!(hint.is_some());
@@ -228,10 +223,10 @@ mod tests {
         // Create a CSV error (this would normally come from csv crate)
         let csv_error = csv::Error::from(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "Invalid CSV format"
+            "Invalid CSV format",
         ));
         let error = WarpError::Csv(csv_error);
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("📊"));
@@ -244,7 +239,7 @@ mod tests {
         let json_str = "{invalid json}";
         let json_error = serde_json::from_str::<serde_json::Value>(json_str).unwrap_err();
         let error = WarpError::Serialization(json_error);
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("📄"));
@@ -254,7 +249,7 @@ mod tests {
     #[test]
     fn test_other_error() {
         let error = WarpError::Other("예상치 못한 오류가 발생했습니다".to_string());
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("⚠️"));
@@ -265,13 +260,13 @@ mod tests {
     fn test_timeout_error_message() {
         // Test timeout error message and hint
         let error = WarpError::Timeout(30);
-        
+
         // Check error message
         let msg = error.to_string();
         assert!(msg.contains("⏱️"));
         assert!(msg.contains("시간 초과"));
         assert!(msg.contains("30초"));
-        
+
         // Note: Network timeout errors would be tested in integration tests
         // where we can create actual reqwest::Error instances
     }

@@ -1,6 +1,6 @@
-use warp::api::{ApiType, types::*};
-use warp::config::Config;
+use warp::api::{types::*, ApiType};
 use warp::cli::OutputFormat;
+use warp::config::Config;
 
 #[test]
 fn test_api_type_from_str() {
@@ -37,19 +37,22 @@ fn test_config_path() {
 #[cfg(test)]
 mod api_tests {
     use super::*;
-    use mockito::{Server, Matcher};
-    use warp::api::{client::{ClientConfig, LegalApiClient}, nlic::NlicClient};
+    use mockito::{Matcher, Server};
+    use warp::api::{
+        client::{ClientConfig, LegalApiClient},
+        nlic::NlicClient,
+    };
 
     #[tokio::test]
     async fn test_nlic_client_no_api_key() {
         let config = ClientConfig::default();
         let client = NlicClient::new(config);
-        
+
         let request = UnifiedSearchRequest {
             query: "test".to_string(),
             ..Default::default()
         };
-        
+
         let result = client.search(request).await;
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -61,14 +64,16 @@ mod api_tests {
     #[tokio::test]
     async fn test_nlic_search_mock() {
         let mut server = Server::new_async().await;
-        let _m = server.mock("GET", "/DRF/lawSearch.do")
+        let _m = server
+            .mock("GET", "/DRF/lawSearch.do")
             .match_query(Matcher::AllOf(vec![
                 Matcher::UrlEncoded("OC".to_string(), "test_key".to_string()),
                 Matcher::UrlEncoded("query".to_string(), "민법".to_string()),
             ]))
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(r#"{
+            .with_body(
+                r#"{
                 "totalCnt": 1,
                 "page": 1,
                 "display": 50,
@@ -81,7 +86,8 @@ mod api_tests {
                     "시행일자": "20210101",
                     "개정일자": "20201231"
                 }]
-            }"#)
+            }"#,
+            )
             .create_async()
             .await;
 
@@ -89,7 +95,7 @@ mod api_tests {
             api_key: "test_key".to_string(),
             ..Default::default()
         };
-        
+
         // Note: This test would require modifying the NlicClient to accept a base URL
         // For now, this is a template for future testing
     }
@@ -98,9 +104,9 @@ mod api_tests {
 #[cfg(test)]
 mod formatter_tests {
     use super::*;
-    use warp::output::format_search_response;
     use chrono::Utc;
     use std::collections::HashMap;
+    use warp::output::format_search_response;
 
     #[test]
     fn test_format_search_json() {

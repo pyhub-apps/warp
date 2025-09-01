@@ -25,7 +25,7 @@ fn test_parse_single_item_as_object() {
             "name": "Test Law"
         }
     });
-    
+
     let response: TestResponse = serde_json::from_value(json).expect("Failed to parse single item");
     assert_eq!(response.items.len(), 1);
     assert_eq!(response.items[0].id, "LAW001");
@@ -47,8 +47,9 @@ fn test_parse_multiple_items_as_array() {
             }
         ]
     });
-    
-    let response: TestResponse = serde_json::from_value(json).expect("Failed to parse multiple items");
+
+    let response: TestResponse =
+        serde_json::from_value(json).expect("Failed to parse multiple items");
     assert_eq!(response.items.len(), 2);
     assert_eq!(response.items[0].id, "LAW001");
     assert_eq!(response.items[1].id, "LAW002");
@@ -60,7 +61,7 @@ fn test_parse_empty_array() {
     let json = json!({
         "items": []
     });
-    
+
     let response: TestResponse = serde_json::from_value(json).expect("Failed to parse empty array");
     assert_eq!(response.items.len(), 0);
 }
@@ -73,13 +74,13 @@ fn test_nlic_style_single_result() {
         #[serde(rename = "LawSearch")]
         law_search: Option<NlicLikeSearchData>,
     }
-    
+
     #[derive(Debug, Deserialize)]
     struct NlicLikeSearchData {
         #[serde(rename = "law", deserialize_with = "single_or_vec")]
         laws: Vec<TestItem>,
     }
-    
+
     // Single result returned as object
     let json = json!({
         "LawSearch": {
@@ -89,8 +90,9 @@ fn test_nlic_style_single_result() {
             }
         }
     });
-    
-    let response: NlicLikeResponse = serde_json::from_value(json).expect("Failed to parse NLIC-style single result");
+
+    let response: NlicLikeResponse =
+        serde_json::from_value(json).expect("Failed to parse NLIC-style single result");
     assert!(response.law_search.is_some());
     let search_data = response.law_search.unwrap();
     assert_eq!(search_data.laws.len(), 1);
@@ -104,13 +106,13 @@ fn test_nlic_style_multiple_results() {
         #[serde(rename = "LawSearch")]
         law_search: Option<NlicLikeSearchData>,
     }
-    
+
     #[derive(Debug, Deserialize)]
     struct NlicLikeSearchData {
         #[serde(rename = "law", deserialize_with = "single_or_vec")]
         laws: Vec<TestItem>,
     }
-    
+
     // Multiple results returned as array
     let json = json!({
         "LawSearch": {
@@ -126,8 +128,9 @@ fn test_nlic_style_multiple_results() {
             ]
         }
     });
-    
-    let response: NlicLikeResponse = serde_json::from_value(json).expect("Failed to parse NLIC-style multiple results");
+
+    let response: NlicLikeResponse =
+        serde_json::from_value(json).expect("Failed to parse NLIC-style multiple results");
     assert!(response.law_search.is_some());
     let search_data = response.law_search.unwrap();
     assert_eq!(search_data.laws.len(), 2);

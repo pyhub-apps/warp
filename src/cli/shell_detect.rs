@@ -47,13 +47,13 @@ pub fn detect_current_shell() -> Option<DetectedShell> {
                 return Some(DetectedShell::WindowsCmd);
             }
         }
-        
+
         // Check for PowerShell specific variables
         if env::var("PSModulePath").is_ok() || env::var("POWERSHELL_DISTRIBUTION_CHANNEL").is_ok() {
             return Some(DetectedShell::Supported(Shell::PowerShell));
         }
     }
-    
+
     // Unix-like platform detection
     #[cfg(unix)]
     {
@@ -63,13 +63,13 @@ pub fn detect_current_shell() -> Option<DetectedShell> {
                 return Some(shell);
             }
         }
-        
+
         // Try to detect from parent process (more reliable for subshells)
         if let Some(shell) = detect_from_parent_process() {
             return Some(shell);
         }
     }
-    
+
     // Fallback: try to detect from any platform
     detect_from_environment()
 }
@@ -78,10 +78,10 @@ pub fn detect_current_shell() -> Option<DetectedShell> {
 fn detect_from_path(path: &str) -> Option<DetectedShell> {
     let path = Path::new(path);
     let shell_name = path.file_name()?.to_str()?;
-    
+
     // Remove common extensions
     let shell_name = shell_name.trim_end_matches(".exe");
-    
+
     match shell_name {
         "bash" | "sh" => Some(DetectedShell::Supported(Shell::Bash)),
         "zsh" => Some(DetectedShell::Supported(Shell::Zsh)),
@@ -99,19 +99,19 @@ fn detect_from_environment() -> Option<DetectedShell> {
     if env::var("BASH_VERSION").is_ok() {
         return Some(DetectedShell::Supported(Shell::Bash));
     }
-    
+
     if env::var("ZSH_VERSION").is_ok() || env::var("ZSH_NAME").is_ok() {
         return Some(DetectedShell::Supported(Shell::Zsh));
     }
-    
+
     if env::var("FISH_VERSION").is_ok() {
         return Some(DetectedShell::Supported(Shell::Fish));
     }
-    
+
     if env::var("PSModulePath").is_ok() {
         return Some(DetectedShell::Supported(Shell::PowerShell));
     }
-    
+
     None
 }
 
@@ -119,7 +119,7 @@ fn detect_from_environment() -> Option<DetectedShell> {
 #[cfg(windows)]
 fn is_running_in_powershell() -> bool {
     // Check for PowerShell-specific environment variables
-    env::var("PSModulePath").is_ok() 
+    env::var("PSModulePath").is_ok()
         || env::var("POWERSHELL_DISTRIBUTION_CHANNEL").is_ok()
         || env::var("PSVersionTable").is_ok()
 }
@@ -128,21 +128,21 @@ fn is_running_in_powershell() -> bool {
 #[cfg(unix)]
 fn detect_from_parent_process() -> Option<DetectedShell> {
     use std::process::Command;
-    
+
     // Try to get parent process ID
     let ppid = std::process::id();
-    
+
     // Try using ps command to get parent process name
     let output = Command::new("ps")
         .args(&["-p", &ppid.to_string(), "-o", "comm="])
         .output()
         .ok()?;
-    
+
     if output.status.success() {
         let process_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
         return detect_from_path(&process_name);
     }
-    
+
     None
 }
 
@@ -154,9 +154,9 @@ fn detect_from_parent_process() -> Option<DetectedShell> {
 /// Prompt user for confirmation
 pub fn confirm_shell_selection(shell: &DetectedShell) -> bool {
     use std::io::{self, Write};
-    
+
     println!("🔍 현재 셸 감지: {}", shell.display_name());
-    
+
     match shell {
         DetectedShell::WindowsCmd => {
             println!("⚠️  Windows 명령 프롬프트(CMD)는 자동완성을 지원하지 않습니다.");
@@ -164,8 +164,11 @@ pub fn confirm_shell_selection(shell: &DetectedShell) -> bool {
             println!();
             print!("PowerShell용 자동완성을 생성하시겠습니까? (y/n): ");
         }
-        DetectedShell::Supported(s) => {
-            print!("{}용 자동완성을 생성하시겠습니까? (y/n): ", shell.display_name());
+        DetectedShell::Supported(_s) => {
+            print!(
+                "{}용 자동완성을 생성하시겠습니까? (y/n): ",
+                shell.display_name()
+            );
         }
         DetectedShell::Unknown(name) => {
             println!("⚠️  알 수 없는 셸: {}", name);
@@ -177,12 +180,12 @@ pub fn confirm_shell_selection(shell: &DetectedShell) -> bool {
             return false;
         }
     }
-    
+
     io::stdout().flush().unwrap();
-    
+
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
-    
+
     matches!(input.trim().to_lowercase().as_str(), "y" | "yes")
 }
 

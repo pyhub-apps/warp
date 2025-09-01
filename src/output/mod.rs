@@ -2,7 +2,7 @@ pub mod formatter;
 
 pub use formatter::Formatter;
 
-use crate::api::types::{SearchResponse, LawDetail, LawHistory};
+use crate::api::types::{LawDetail, LawHistory, SearchResponse};
 use crate::cli::OutputFormat;
 use crate::error::Result;
 
