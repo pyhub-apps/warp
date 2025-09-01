@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod args;
+pub mod shell_detect;
 
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
@@ -77,9 +78,9 @@ pub enum Commands {
     
     /// Generate shell completion scripts
     Completions {
-        /// The shell to generate completions for
+        /// The shell to generate completions for (auto-detect if not specified)
         #[arg(value_enum)]
-        shell: Shell,
+        shell: Option<Shell>,
     },
 }
 
@@ -121,7 +122,54 @@ impl Cli {
                 Ok(())
             }
             Commands::Completions { shell } => {
-                Self::generate_completions(shell);
+                use shell_detect::{detect_current_shell, confirm_shell_selection, get_completion_shell};
+                
+                let target_shell = if let Some(shell) = shell {
+                    // User specified a shell explicitly
+                    shell
+                } else {
+                    // Auto-detect current shell
+                    match detect_current_shell() {
+                        Some(detected) => {
+                            // Ask user for confirmation
+                            if confirm_shell_selection(&detected) {
+                                // Get the appropriate shell for completion generation
+                                match get_completion_shell(&detected) {
+                                    Some(s) => s,
+                                    None => {
+                                        eprintln!("Unable to generate completions for the detected shell.");
+                                        eprintln!("Please specify a shell manually:");
+                                        eprintln!("  warp completions bash");
+                                        eprintln!("  warp completions zsh");
+                                        eprintln!("  warp completions fish");
+                                        eprintln!("  warp completions powershell");
+                                        return Ok(());
+                                    }
+                                }
+                            } else {
+                                // User declined
+                                eprintln!("\nCompletion generation cancelled.");
+                                eprintln!("You can manually generate completions with:");
+                                eprintln!("  warp completions bash");
+                                eprintln!("  warp completions zsh");
+                                eprintln!("  warp completions fish");
+                                eprintln!("  warp completions powershell");
+                                return Ok(());
+                            }
+                        }
+                        None => {
+                            eprintln!("Unable to detect current shell.");
+                            eprintln!("Please specify a shell:");
+                            eprintln!("  warp completions bash");
+                            eprintln!("  warp completions zsh");
+                            eprintln!("  warp completions fish");
+                            eprintln!("  warp completions powershell");
+                            return Ok(());
+                        }
+                    }
+                };
+                
+                Self::generate_completions(target_shell);
                 Ok(())
             }
         };

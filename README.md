@@ -59,11 +59,17 @@ cargo build --release
 # 모든 셸에 설치
 ./install-completions.sh --all
 
-# 수동 생성
+# 수동 생성 (셸 자동 감지)
+warp completions              # 현재 셸을 자동으로 감지하여 대화형으로 진행
+
+# 수동 생성 (특정 셸 지정)
 warp completions bash > ~/.bash_completion.d/warp.bash
 warp completions zsh > ~/.zsh/completions/_warp
 warp completions fish > ~/.config/fish/completions/warp.fish
+warp completions powershell > warp.ps1
 ```
+
+> **참고**: Windows 명령 프롬프트(CMD)는 자동완성을 지원하지 않습니다. PowerShell 사용을 권장합니다.
 
 ## 🚀 빠른 시작
 
@@ -333,7 +339,7 @@ cargo build --release --target x86_64-unknown-linux-gnu
 
 ### 📝 개발 예정
 - [ ] 국제화 (i18n) 지원
-- [ ] Shell 자동완성
+- [x] Shell 자동완성 (완료 - 자동 감지 포함)
 - [ ] 캐싱 시스템
 - [ ] 진행 상황 표시기
 - [ ] 일괄 처리 기능
