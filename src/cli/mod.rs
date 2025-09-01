@@ -2,6 +2,7 @@ pub mod commands;
 pub mod args;
 
 use clap::{Parser, Subcommand};
+use clap_complete::Shell;
 
 /// Korean Legal Information CLI
 #[derive(Parser, Debug)]
@@ -73,9 +74,27 @@ pub enum Commands {
     
     /// Show version information
     Version,
+    
+    /// Generate shell completion scripts
+    Completions {
+        /// The shell to generate completions for
+        #[arg(value_enum)]
+        shell: Shell,
+    },
 }
 
 impl Cli {
+    /// Generate shell completion scripts
+    fn generate_completions(shell: Shell) {
+        use clap::{Command, CommandFactory};
+        use clap_complete::generate;
+        use std::io;
+        
+        let mut cmd = Self::command();
+        let name = cmd.get_name().to_string();
+        generate(shell, &mut cmd, name, &mut io::stdout());
+    }
+    
     /// Run the CLI application
     pub async fn run() -> crate::error::Result<()> {
         let cli = Self::parse();
@@ -99,6 +118,10 @@ impl Cli {
             Commands::Config(args) => commands::config::execute(args).await,
             Commands::Version => {
                 commands::version::execute();
+                Ok(())
+            }
+            Commands::Completions { shell } => {
+                Self::generate_completions(shell);
                 Ok(())
             }
         };

@@ -42,6 +42,29 @@ cd warp
 cargo build --release
 ```
 
+### Shell 자동완성 설치
+
+빌드 후 자동완성을 설치하면 명령어와 옵션을 쉽게 입력할 수 있습니다:
+
+```bash
+# 자동 설치 (현재 셸 감지)
+./install-completions.sh
+
+# 특정 셸 설치
+./install-completions.sh --bash
+./install-completions.sh --zsh
+./install-completions.sh --fish
+./install-completions.sh --powershell
+
+# 모든 셸에 설치
+./install-completions.sh --all
+
+# 수동 생성
+warp completions bash > ~/.bash_completion.d/warp.bash
+warp completions zsh > ~/.zsh/completions/_warp
+warp completions fish > ~/.config/fish/completions/warp.fish
+```
+
 ## 🚀 빠른 시작
 
 ### 1. API 키 발급
