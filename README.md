@@ -171,6 +171,25 @@ warp config get law.key
 warp config set law.key NEW_API_KEY
 ```
 
+## ⚙️ 설정 파일
+
+Warp는 TOML 형식의 설정 파일을 사용합니다 (`~/.pyhub/warp/config.toml`):
+
+```toml
+[law]
+key = "YOUR_API_KEY"  # 공통 API 키
+
+[law.nlic]
+# key = "NLIC_KEY"   # 국가법령정보센터 전용 (선택)
+
+[law.elis]
+# key = "ELIS_KEY"   # 자치법규정보시스템 전용 (선택)
+
+# ... 기타 API 설정
+```
+
+> **참고**: 기존 YAML 설정 파일(`config.yaml`)은 자동으로 TOML로 마이그레이션됩니다.
+
 ## 🏗️ 프로젝트 구조
 
 ```
