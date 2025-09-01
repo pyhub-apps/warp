@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use crate::error::{Result, WarpError};
 
 const CONFIG_DIR_NAME: &str = ".pyhub/warp";
-const CONFIG_FILE_NAME: &str = "config.yaml";
+const CONFIG_FILE_NAME: &str = "config.toml";
+const LEGACY_CONFIG_FILE_NAME: &str = "config.yaml";
 
 /// Application configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -65,6 +66,55 @@ impl Config {
         Ok(Self::config_path()?.join(CONFIG_FILE_NAME))
     }
     
+    /// Get the legacy YAML configuration file path
+    fn legacy_config_file_path() -> Result<PathBuf> {
+        Ok(Self::config_path()?.join(LEGACY_CONFIG_FILE_NAME))
+    }
+    
+    /// Migrate from YAML to TOML if legacy file exists
+    fn migrate_yaml_to_toml() -> Result<()> {
+        let legacy_file = Self::legacy_config_file_path()?;
+        let new_file = Self::config_file_path()?;
+        
+        // Only migrate if YAML exists and TOML doesn't
+        if legacy_file.exists() && !new_file.exists() {
+            eprintln!("📦 Migrating configuration from YAML to TOML format...");
+            
+            // Read and parse YAML
+            let yaml_contents = fs::read_to_string(&legacy_file)
+                .map_err(|e| WarpError::Config(format!("Failed to read legacy config: {}", e)))?;
+            
+            let config: Self = serde_yaml::from_str(&yaml_contents)
+                .map_err(|e| WarpError::Config(format!("Failed to parse legacy config: {}", e)))?;
+            
+            // Save as TOML
+            let toml_str = toml::to_string_pretty(&config)
+                .map_err(|e| WarpError::Config(format!("Failed to serialize to TOML: {}", e)))?;
+            
+            fs::write(&new_file, toml_str)
+                .map_err(|e| WarpError::Config(format!("Failed to write TOML config: {}", e)))?;
+            
+            // Set permissions on new file
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let permissions = fs::Permissions::from_mode(0o600);
+                fs::set_permissions(&new_file, permissions)
+                    .map_err(|e| WarpError::Config(format!("Failed to set file permissions: {}", e)))?;
+            }
+            
+            // Create backup of YAML file
+            let backup_file = legacy_file.with_extension("yaml.backup");
+            fs::rename(&legacy_file, &backup_file)
+                .map_err(|e| WarpError::Config(format!("Failed to backup legacy config: {}", e)))?;
+            
+            eprintln!("✅ Configuration migrated successfully!");
+            eprintln!("   Old YAML file backed up to: {}", backup_file.display());
+        }
+        
+        Ok(())
+    }
+    
     /// Initialize configuration directory and file
     pub fn initialize() -> Result<()> {
         let config_dir = Self::config_path()?;
@@ -84,15 +134,18 @@ impl Config {
             }
         }
         
+        // Try to migrate from YAML to TOML if needed
+        Self::migrate_yaml_to_toml()?;
+        
         let config_file = Self::config_file_path()?;
         
         // Create default config file if it doesn't exist
         if !config_file.exists() {
             let default_config = Self::default();
-            let yaml = serde_yaml::to_string(&default_config)
+            let toml_str = toml::to_string_pretty(&default_config)
                 .map_err(|e| WarpError::Config(format!("Failed to serialize config: {}", e)))?;
             
-            fs::write(&config_file, yaml)
+            fs::write(&config_file, toml_str)
                 .map_err(|e| WarpError::Config(format!("Failed to write config file: {}", e)))?;
             
             // Set file permissions to 0600 on Unix
@@ -116,7 +169,7 @@ impl Config {
         let contents = fs::read_to_string(&config_file)
             .map_err(|e| WarpError::Config(format!("Failed to read config file: {}", e)))?;
         
-        let config: Self = serde_yaml::from_str(&contents)
+        let config: Self = toml::from_str(&contents)
             .map_err(|e| WarpError::Config(format!("Failed to parse config file: {}", e)))?;
         
         Ok(config)
@@ -127,10 +180,10 @@ impl Config {
         Self::initialize()?;
         
         let config_file = Self::config_file_path()?;
-        let yaml = serde_yaml::to_string(self)
+        let toml_str = toml::to_string_pretty(self)
             .map_err(|e| WarpError::Config(format!("Failed to serialize config: {}", e)))?;
         
-        fs::write(&config_file, yaml)
+        fs::write(&config_file, toml_str)
             .map_err(|e| WarpError::Config(format!("Failed to write config file: {}", e)))?;
         
         // Set file permissions to 0600 on Unix

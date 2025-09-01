@@ -98,19 +98,25 @@ warp law "개인정보" --format markdown --size 5
 
 ### Q: 설정 파일은 어디에 저장되나요?
 **A:** 운영체제별로 다릅니다.
-- **Linux/macOS**: `~/.config/warp/config.yaml`
-- **Windows**: `%APPDATA%\warp\config.yaml`
+- **Linux/macOS**: `~/.pyhub/warp/config.toml`
+- **Windows**: `%USERPROFILE%\.pyhub\warp\config.toml`
 
 확인 방법:
 ```bash
 warp config path
 ```
 
+### Q: YAML 설정 파일을 사용하고 있었는데요?
+**A:** 자동으로 TOML로 마이그레이션됩니다.
+- 첫 실행 시 `config.yaml`을 `config.toml`로 자동 변환
+- 기존 YAML 파일은 `config.yaml.backup`으로 백업
+- 수동 변경 필요 없음
+
 ### Q: 설정을 초기화하려면?
 **A:** 
 ```bash
 # 설정 파일 삭제
-rm ~/.config/warp/config.yaml
+rm ~/.pyhub/warp/config.toml
 
 # 재초기화
 warp config init
@@ -120,10 +126,10 @@ warp config init
 **A:**
 ```bash
 # 백업
-cp ~/.config/warp/config.yaml ~/warp-config-backup.yaml
+cp ~/.pyhub/warp/config.toml ~/warp-config-backup.toml
 
 # 복원
-cp ~/warp-config-backup.yaml ~/.config/warp/config.yaml
+cp ~/warp-config-backup.toml ~/.pyhub/warp/config.toml
 ```
 
 ## 🚀 성능 관련
