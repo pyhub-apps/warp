@@ -158,11 +158,11 @@ jobs:
             use_cross: true
             
           # Windows builds
-          - os: windows-latest
+          - os: windows-2022
             target: x86_64-pc-windows-msvc
             archive: zip
             
-          - os: windows-latest
+          - os: windows-2022
             target: aarch64-pc-windows-msvc
             archive: zip
 
@@ -296,6 +296,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Create install script
         run: |
           cat > install.sh << 'EOF'
