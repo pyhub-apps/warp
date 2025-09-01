@@ -8,6 +8,7 @@ use tokio::time::sleep;
 
 use crate::error::{Result, WarpError};
 use super::{ApiType, LegalApiClient};
+use super::deserializers::{single_or_vec, single_or_vec_or_null};
 use super::client::ClientConfig;
 use super::types::{UnifiedSearchRequest, SearchResponse, SearchItem, LawDetail, LawHistory};
 
@@ -276,7 +277,7 @@ struct PrecSearchResponse {
     page_no: Option<u32>,
     #[serde(rename = "display")]
     page_size: Option<u32>,
-    #[serde(rename = "prec", default)]
+    #[serde(rename = "prec", default, deserialize_with = "single_or_vec_or_null")]
     cases: Option<Vec<PrecCase>>,
 }
 
@@ -288,7 +289,7 @@ struct PrecSearchData {
     page_no: Option<String>,
     #[serde(rename = "display")]
     page_size: Option<String>,
-    #[serde(rename = "prec", default)]
+    #[serde(rename = "prec", default, deserialize_with = "single_or_vec")]
     cases: Vec<PrecCase>,
 }
 
