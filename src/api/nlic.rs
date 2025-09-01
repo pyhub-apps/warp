@@ -5,8 +5,10 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::sleep;
+use log::{debug, info, warn};
 
 use crate::error::{Result, WarpError};
+use crate::cache::key::CacheKeyGenerator;
 use super::{ApiType, LegalApiClient};
 use super::deserializers::single_or_vec;
 use super::client::ClientConfig;
@@ -34,6 +36,55 @@ impl NlicClient {
             config,
             http_client,
         }
+    }
+
+    /// Check cache for cached response
+    async fn check_cache(&self, cache_key: &str) -> Result<Option<SearchResponse>> {
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Checking cache for key: {}", cache_key);
+                if let Some(cached_data) = cache.get(cache_key).await? {
+                    debug!("Cache hit for key: {}", cache_key);
+                    match serde_json::from_slice::<SearchResponse>(&cached_data) {
+                        Ok(response) => {
+                            info!("Successfully retrieved cached search response");
+                            return Ok(Some(response));
+                        }
+                        Err(e) => {
+                            warn!("Failed to deserialize cached response: {}, removing from cache", e);
+                            let _ = cache.remove(cache_key).await;
+                        }
+                    }
+                } else {
+                    debug!("Cache miss for key: {}", cache_key);
+                }
+            } else {
+                debug!("Cache bypassed for key: {}", cache_key);
+            }
+        }
+        Ok(None)
+    }
+
+    /// Store response in cache
+    async fn store_in_cache(&self, cache_key: &str, response: &SearchResponse) -> Result<()> {
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Storing response in cache for key: {}", cache_key);
+                match serde_json::to_vec(response) {
+                    Ok(serialized) => {
+                        if let Err(e) = cache.put(cache_key, serialized, self.api_type(), None).await {
+                            warn!("Failed to store response in cache: {}", e);
+                        } else {
+                            info!("Successfully cached search response");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to serialize response for caching: {}", e);
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Execute request with retry logic
@@ -144,6 +195,20 @@ impl LegalApiClient for NlicClient {
             return Err(WarpError::NoApiKey);
         }
 
+        // Generate cache key for this request
+        let cache_key = CacheKeyGenerator::nlic_key(
+            "search",
+            Some(&request.query),
+            request.law_type.as_deref(),
+            Some(request.page_no),
+            Some(request.page_size),
+        );
+
+        // Check cache first
+        if let Some(cached_response) = self.check_cache(&cache_key).await? {
+            return Ok(cached_response);
+        }
+
         // Calculate the starting position (offset) for the API
         // The API seems to expect an offset rather than a page number
         // For page 1 with size 10, offset should be 1
@@ -224,12 +289,44 @@ impl LegalApiClient for NlicClient {
                 }
             })?;
 
-        Ok(self.parse_search_response(raw, request.page_no))
+        let response = self.parse_search_response(raw, request.page_no);
+        
+        // Store in cache
+        if let Err(e) = self.store_in_cache(&cache_key, &response).await {
+            warn!("Failed to cache response: {}", e);
+        }
+        
+        Ok(response)
     }
 
     async fn get_detail(&self, id: &str) -> Result<LawDetail> {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
+        }
+        
+        // Generate cache key for detail request
+        let cache_key = format!("{}:detail:{}", self.api_type().as_str(), id);
+        
+        // Check cache for detail response
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Checking cache for detail key: {}", cache_key);
+                if let Some(cached_data) = cache.get(&cache_key).await? {
+                    debug!("Cache hit for detail key: {}", cache_key);
+                    match serde_json::from_slice::<LawDetail>(&cached_data) {
+                        Ok(detail) => {
+                            info!("Successfully retrieved cached law detail");
+                            return Ok(detail);
+                        }
+                        Err(e) => {
+                            warn!("Failed to deserialize cached detail: {}, removing from cache", e);
+                            let _ = cache.remove(&cache_key).await;
+                        }
+                    }
+                } else {
+                    debug!("Cache miss for detail key: {}", cache_key);
+                }
+            }
         }
 
         let params = vec![
@@ -262,12 +359,58 @@ impl LegalApiClient for NlicClient {
             .map_err(|e| WarpError::Parse(format!("Failed to parse detail response: {}", e)))?;
 
         // Convert NLIC response to unified format
-        Ok(raw.law.into_law_detail())
+        let detail = raw.law.into_law_detail();
+        
+        // Store detail in cache
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Storing detail in cache for key: {}", cache_key);
+                match serde_json::to_vec(&detail) {
+                    Ok(serialized) => {
+                        if let Err(e) = cache.put(&cache_key, serialized, self.api_type(), None).await {
+                            warn!("Failed to store detail in cache: {}", e);
+                        } else {
+                            info!("Successfully cached law detail");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to serialize detail for caching: {}", e);
+                    }
+                }
+            }
+        }
+        
+        Ok(detail)
     }
 
     async fn get_history(&self, id: &str) -> Result<LawHistory> {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
+        }
+        
+        // Generate cache key for history request
+        let cache_key = format!("{}:history:{}", self.api_type().as_str(), id);
+        
+        // Check cache for history response
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Checking cache for history key: {}", cache_key);
+                if let Some(cached_data) = cache.get(&cache_key).await? {
+                    debug!("Cache hit for history key: {}", cache_key);
+                    match serde_json::from_slice::<LawHistory>(&cached_data) {
+                        Ok(history) => {
+                            info!("Successfully retrieved cached law history");
+                            return Ok(history);
+                        }
+                        Err(e) => {
+                            warn!("Failed to deserialize cached history: {}, removing from cache", e);
+                            let _ = cache.remove(&cache_key).await;
+                        }
+                    }
+                } else {
+                    debug!("Cache miss for history key: {}", cache_key);
+                }
+            }
         }
 
         let params = vec![
@@ -298,7 +441,28 @@ impl LegalApiClient for NlicClient {
         let raw: NlicHistoryResponse = serde_json::from_str(&response_text)
             .map_err(|e| WarpError::Parse(format!("Failed to parse history response: {}", e)))?;
 
-        Ok(raw.into_law_history())
+        let history = raw.into_law_history();
+        
+        // Store history in cache
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Storing history in cache for key: {}", cache_key);
+                match serde_json::to_vec(&history) {
+                    Ok(serialized) => {
+                        if let Err(e) = cache.put(&cache_key, serialized, self.api_type(), None).await {
+                            warn!("Failed to store history in cache: {}", e);
+                        } else {
+                            info!("Successfully cached law history");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to serialize history for caching: {}", e);
+                    }
+                }
+            }
+        }
+        
+        Ok(history)
     }
 
     fn api_type(&self) -> ApiType {

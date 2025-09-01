@@ -1,4 +1,5 @@
 pub mod config;
+pub mod cache;
 pub mod law;
 pub mod ordinance;
 pub mod precedent;

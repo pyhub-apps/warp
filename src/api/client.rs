@@ -1,5 +1,7 @@
 use async_trait::async_trait;
+use std::sync::Arc;
 use crate::error::Result;
+use crate::cache::CacheStore;
 use super::types::*;
 use super::ApiType;
 
@@ -41,6 +43,10 @@ pub struct ClientConfig {
     pub retry_base_delay: u64,
     /// User agent string
     pub user_agent: String,
+    /// Cache store for API responses (optional)
+    pub cache: Option<Arc<CacheStore>>,
+    /// Whether to bypass cache for requests
+    pub bypass_cache: bool,
 }
 
 impl Default for ClientConfig {
@@ -51,6 +57,8 @@ impl Default for ClientConfig {
             max_retries: 3,
             retry_base_delay: 100,
             user_agent: format!("warp/{}", env!("CARGO_PKG_VERSION")),
+            cache: None,
+            bypass_cache: false,
         }
     }
 }

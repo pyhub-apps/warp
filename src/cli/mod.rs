@@ -23,6 +23,10 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub quiet: bool,
 
+    /// Disable cache for this operation
+    #[arg(long, global = true)]
+    pub no_cache: bool,
+
     /// Output format
     #[arg(short, long, global = true, value_enum, default_value = "table")]
     pub format: OutputFormat,
@@ -77,6 +81,9 @@ pub enum Commands {
     #[command(alias = "c")]
     Config(args::ConfigArgs),
     
+    /// Manage cache
+    Cache(args::CacheArgs),
+    
     /// Show version information
     Version,
     
@@ -114,13 +121,14 @@ impl Cli {
         }
         
         let result = match cli.command {
-            Commands::Law(args) => commands::law::execute(args, cli.format, cli.quiet, cli.verbose).await,
-            Commands::Ordinance(args) => commands::ordinance::execute(args, cli.format, cli.quiet, cli.verbose).await,
-            Commands::Precedent(args) => commands::precedent::execute(args, cli.format, cli.quiet, cli.verbose).await,
-            Commands::Admrule(args) => commands::admrule::execute(args, cli.format, cli.quiet, cli.verbose).await,
-            Commands::Interpretation(args) => commands::interpretation::execute(args, cli.format, cli.quiet, cli.verbose).await,
-            Commands::Search(args) => commands::search::execute(args, cli.format, cli.quiet, cli.verbose).await,
+            Commands::Law(args) => commands::law::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
+            Commands::Ordinance(args) => commands::ordinance::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
+            Commands::Precedent(args) => commands::precedent::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
+            Commands::Admrule(args) => commands::admrule::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
+            Commands::Interpretation(args) => commands::interpretation::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
+            Commands::Search(args) => commands::search::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
             Commands::Config(args) => commands::config::execute(args).await,
+            Commands::Cache(args) => commands::cache::execute(args).await,
             Commands::Version => {
                 commands::version::execute();
                 Ok(())

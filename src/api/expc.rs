@@ -5,8 +5,10 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::sleep;
+use log::{debug, info, warn};
 
 use crate::error::{Result, WarpError};
+use crate::cache::key::CacheKeyGenerator;
 use super::{ApiType, LegalApiClient};
 use super::deserializers::{single_or_vec, single_or_vec_or_null};
 use super::client::ClientConfig;
@@ -31,6 +33,53 @@ impl ExpcClient {
         Self { config, client }
     }
     
+    /// Check cache for cached search response
+    async fn check_search_cache(&self, cache_key: &str) -> Result<Option<SearchResponse>> {
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Checking cache for EXPC search key: {}", cache_key);
+                if let Some(cached_data) = cache.get(cache_key).await? {
+                    debug!("Cache hit for EXPC search key: {}", cache_key);
+                    match serde_json::from_slice::<SearchResponse>(&cached_data) {
+                        Ok(response) => {
+                            info!("Successfully retrieved cached EXPC search response");
+                            return Ok(Some(response));
+                        }
+                        Err(e) => {
+                            warn!("Failed to deserialize cached EXPC search response: {}, removing from cache", e);
+                            let _ = cache.remove(cache_key).await;
+                        }
+                    }
+                } else {
+                    debug!("Cache miss for EXPC search key: {}", cache_key);
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Store search response in cache
+    async fn store_search_in_cache(&self, cache_key: &str, response: &SearchResponse) -> Result<()> {
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Storing EXPC search response in cache for key: {}", cache_key);
+                match serde_json::to_vec(response) {
+                    Ok(serialized) => {
+                        if let Err(e) = cache.put(cache_key, serialized, self.api_type(), None).await {
+                            warn!("Failed to store EXPC search response in cache: {}", e);
+                        } else {
+                            info!("Successfully cached EXPC search response");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to serialize EXPC search response for caching: {}", e);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Execute HTTP request with retry logic
     async fn execute_with_retry(&self, url: String) -> Result<reqwest::Response> {
         let mut last_error = None;
@@ -127,6 +176,21 @@ impl LegalApiClient for ExpcClient {
             return Err(WarpError::NoApiKey);
         }
         
+        // Generate cache key for this EXPC search request
+        let cache_key = CacheKeyGenerator::expc_key(
+            "search",
+            Some(&request.query),
+            None, // interpretation_type not used in this request
+            request.department.as_deref(), // requesting_agency
+            Some(request.page_no),
+            Some(request.page_size),
+        );
+        
+        // Check cache first
+        if let Some(cached_response) = self.check_search_cache(&cache_key).await? {
+            return Ok(cached_response);
+        }
+        
         // Calculate the starting position (offset) for the API
         let offset = ((request.page_no - 1) * request.page_size) + 1;
         
@@ -198,12 +262,44 @@ impl LegalApiClient for ExpcClient {
                 }
             })?;
         
-        Ok(self.parse_search_response(raw, request.page_no))
+        let response = self.parse_search_response(raw, request.page_no);
+        
+        // Store in cache
+        if let Err(e) = self.store_search_in_cache(&cache_key, &response).await {
+            warn!("Failed to cache EXPC search response: {}", e);
+        }
+        
+        Ok(response)
     }
     
     async fn get_detail(&self, id: &str) -> Result<LawDetail> {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
+        }
+        
+        // Generate cache key for detail request
+        let cache_key = format!("{}:detail:{}", self.api_type().as_str(), id);
+        
+        // Check cache for detail response
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Checking cache for EXPC detail key: {}", cache_key);
+                if let Some(cached_data) = cache.get(&cache_key).await? {
+                    debug!("Cache hit for EXPC detail key: {}", cache_key);
+                    match serde_json::from_slice::<LawDetail>(&cached_data) {
+                        Ok(detail) => {
+                            info!("Successfully retrieved cached EXPC law detail");
+                            return Ok(detail);
+                        }
+                        Err(e) => {
+                            warn!("Failed to deserialize cached EXPC detail: {}, removing from cache", e);
+                            let _ = cache.remove(&cache_key).await;
+                        }
+                    }
+                } else {
+                    debug!("Cache miss for EXPC detail key: {}", cache_key);
+                }
+            }
         }
         
         let params = vec![
@@ -232,7 +328,28 @@ impl LegalApiClient for ExpcClient {
         let raw: ExpcDetailResponse = serde_json::from_str(&response_text)
             .map_err(|e| WarpError::Parse(format!("Failed to parse legal interpretation detail: {}", e)))?;
         
-        Ok(raw.into_law_detail())
+        let detail = raw.into_law_detail();
+        
+        // Store detail in cache
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Storing EXPC detail in cache for key: {}", cache_key);
+                match serde_json::to_vec(&detail) {
+                    Ok(serialized) => {
+                        if let Err(e) = cache.put(&cache_key, serialized, self.api_type(), None).await {
+                            warn!("Failed to store EXPC detail in cache: {}", e);
+                        } else {
+                            info!("Successfully cached EXPC law detail");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to serialize EXPC detail for caching: {}", e);
+                    }
+                }
+            }
+        }
+        
+        Ok(detail)
     }
     
     async fn get_history(&self, _id: &str) -> Result<LawHistory> {

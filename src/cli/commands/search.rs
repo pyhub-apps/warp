@@ -7,12 +7,13 @@ use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
 use crate::progress::{ProgressManager, messages};
+use crate::cache::CacheStore;
 use futures::future::join_all;
 use std::sync::Arc;
 use chrono::Utc;
 
 /// Execute unified search command across multiple APIs
-pub async fn execute(args: SearchArgs, format: OutputFormat, quiet: bool, verbose: bool) -> Result<()> {
+pub async fn execute(args: SearchArgs, format: OutputFormat, quiet: bool, verbose: bool, no_cache: bool) -> Result<()> {
     // Create progress manager
     let progress_manager = Arc::new(ProgressManager::new(quiet, verbose));
     if args.query.trim().is_empty() {
@@ -55,8 +56,18 @@ pub async fn execute(args: SearchArgs, format: OutputFormat, quiet: bool, verbos
         };
         
         if let Some(api_key) = api_key {
+            // Create cache store if cache is enabled and not bypassed
+            let cache = if config.cache.enabled && !no_cache {
+                let cache_config = config.cache.to_cache_config();
+                Some(Arc::new(CacheStore::new(cache_config).await?))
+            } else {
+                None
+            };
+            
             let client_config = ClientConfig {
                 api_key,
+                cache,
+                bypass_cache: no_cache,
                 ..Default::default()
             };
             

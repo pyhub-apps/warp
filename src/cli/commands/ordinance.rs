@@ -8,17 +8,28 @@ use crate::cli::OutputFormat;
 use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
+use crate::cache::CacheStore;
 
 /// Execute ordinance command (자치법규)
-pub async fn execute(args: OrdinanceArgs, format: OutputFormat, quiet: bool, verbose: bool) -> Result<()> {
+pub async fn execute(args: OrdinanceArgs, format: OutputFormat, quiet: bool, verbose: bool, no_cache: bool) -> Result<()> {
     // Load configuration
     let config = Config::load()?;
     let api_key = config.get_elis_api_key()
         .ok_or(WarpError::NoApiKey)?;
     
+    // Create cache store if cache is enabled and not bypassed
+    let cache = if config.cache.enabled && !no_cache {
+        let cache_config = config.cache.to_cache_config();
+        Some(Arc::new(CacheStore::new(cache_config).await?))
+    } else {
+        None
+    };
+    
     // Create API client
     let client_config = ClientConfig {
         api_key,
+        cache,
+        bypass_cache: no_cache,
         ..Default::default()
     };
     

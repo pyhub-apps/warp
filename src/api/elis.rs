@@ -5,8 +5,10 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::sleep;
+use log::{debug, info, warn};
 
 use crate::error::{Result, WarpError};
+use crate::cache::key::CacheKeyGenerator;
 use super::{ApiType, LegalApiClient};
 use super::deserializers::{single_or_vec, single_or_vec_or_null};
 use super::client::ClientConfig;
@@ -31,6 +33,53 @@ impl ElisClient {
         Self { config, client }
     }
     
+    /// Check cache for cached search response
+    async fn check_search_cache(&self, cache_key: &str) -> Result<Option<SearchResponse>> {
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Checking cache for ELIS search key: {}", cache_key);
+                if let Some(cached_data) = cache.get(cache_key).await? {
+                    debug!("Cache hit for ELIS search key: {}", cache_key);
+                    match serde_json::from_slice::<SearchResponse>(&cached_data) {
+                        Ok(response) => {
+                            info!("Successfully retrieved cached ELIS search response");
+                            return Ok(Some(response));
+                        }
+                        Err(e) => {
+                            warn!("Failed to deserialize cached ELIS search response: {}, removing from cache", e);
+                            let _ = cache.remove(cache_key).await;
+                        }
+                    }
+                } else {
+                    debug!("Cache miss for ELIS search key: {}", cache_key);
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Store search response in cache
+    async fn store_search_in_cache(&self, cache_key: &str, response: &SearchResponse) -> Result<()> {
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Storing ELIS search response in cache for key: {}", cache_key);
+                match serde_json::to_vec(response) {
+                    Ok(serialized) => {
+                        if let Err(e) = cache.put(cache_key, serialized, self.api_type(), None).await {
+                            warn!("Failed to store ELIS search response in cache: {}", e);
+                        } else {
+                            info!("Successfully cached ELIS search response");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to serialize ELIS search response for caching: {}", e);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Execute HTTP request with retry logic
     async fn execute_with_retry(&self, url: String) -> Result<reqwest::Response> {
         let mut last_error = None;
@@ -114,6 +163,21 @@ impl LegalApiClient for ElisClient {
             return Err(WarpError::NoApiKey);
         }
         
+        // Generate cache key for this ELIS search request
+        let cache_key = CacheKeyGenerator::elis_key(
+            "search",
+            Some(&request.query),
+            request.region.as_deref(),
+            request.law_type.as_deref(),
+            Some(request.page_no),
+            Some(request.page_size),
+        );
+        
+        // Check cache first
+        if let Some(cached_response) = self.check_search_cache(&cache_key).await? {
+            return Ok(cached_response);
+        }
+        
         // Calculate the starting position (offset) for the API
         let offset = ((request.page_no - 1) * request.page_size) + 1;
         
@@ -159,12 +223,44 @@ impl LegalApiClient for ElisClient {
                 WarpError::Parse(format!("Failed to parse ELIS response: {}", e))
             })?;
         
-        Ok(self.parse_search_response(raw, request.page_no))
+        let response = self.parse_search_response(raw, request.page_no);
+        
+        // Store in cache
+        if let Err(e) = self.store_search_in_cache(&cache_key, &response).await {
+            warn!("Failed to cache ELIS search response: {}", e);
+        }
+        
+        Ok(response)
     }
     
     async fn get_detail(&self, id: &str) -> Result<LawDetail> {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
+        }
+        
+        // Generate cache key for detail request
+        let cache_key = format!("{}:detail:{}", self.api_type().as_str(), id);
+        
+        // Check cache for detail response
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Checking cache for ELIS detail key: {}", cache_key);
+                if let Some(cached_data) = cache.get(&cache_key).await? {
+                    debug!("Cache hit for ELIS detail key: {}", cache_key);
+                    match serde_json::from_slice::<LawDetail>(&cached_data) {
+                        Ok(detail) => {
+                            info!("Successfully retrieved cached ELIS law detail");
+                            return Ok(detail);
+                        }
+                        Err(e) => {
+                            warn!("Failed to deserialize cached ELIS detail: {}, removing from cache", e);
+                            let _ = cache.remove(&cache_key).await;
+                        }
+                    }
+                } else {
+                    debug!("Cache miss for ELIS detail key: {}", cache_key);
+                }
+            }
         }
         
         // ELIS detail API implementation
@@ -195,7 +291,28 @@ impl LegalApiClient for ElisClient {
         let raw: ElisDetailResponse = serde_json::from_str(&response_text)
             .map_err(|e| WarpError::Parse(format!("Failed to parse detail response: {}", e)))?;
         
-        Ok(raw.into_law_detail())
+        let detail = raw.into_law_detail();
+        
+        // Store detail in cache
+        if let Some(ref cache) = self.config.cache {
+            if !self.config.bypass_cache {
+                debug!("Storing ELIS detail in cache for key: {}", cache_key);
+                match serde_json::to_vec(&detail) {
+                    Ok(serialized) => {
+                        if let Err(e) = cache.put(&cache_key, serialized, self.api_type(), None).await {
+                            warn!("Failed to store ELIS detail in cache: {}", e);
+                        } else {
+                            info!("Successfully cached ELIS law detail");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to serialize ELIS detail for caching: {}", e);
+                    }
+                }
+            }
+        }
+        
+        Ok(detail)
     }
     
     async fn get_history(&self, id: &str) -> Result<LawHistory> {

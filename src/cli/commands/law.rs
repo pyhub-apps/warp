@@ -7,10 +7,11 @@ use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
 use crate::progress::{ProgressManager, ApiProgress};
+use crate::cache::CacheStore;
 use std::sync::Arc;
 
 /// Execute law command
-pub async fn execute(args: LawArgs, format: OutputFormat, quiet: bool, verbose: bool) -> Result<()> {
+pub async fn execute(args: LawArgs, format: OutputFormat, quiet: bool, verbose: bool, no_cache: bool) -> Result<()> {
     // Create progress manager
     let progress_manager = Arc::new(ProgressManager::new(quiet, verbose));
     
@@ -19,9 +20,19 @@ pub async fn execute(args: LawArgs, format: OutputFormat, quiet: bool, verbose: 
     let api_key = config.get_nlic_api_key()
         .ok_or(WarpError::NoApiKey)?;
     
+    // Create cache store if cache is enabled and not bypassed
+    let cache = if config.cache.enabled && !no_cache {
+        let cache_config = config.cache.to_cache_config();
+        Some(Arc::new(CacheStore::new(cache_config).await?))
+    } else {
+        None
+    };
+    
     // Create API client
     let client_config = ClientConfig {
         api_key,
+        cache,
+        bypass_cache: no_cache,
         ..Default::default()
     };
     
