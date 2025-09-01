@@ -212,7 +212,7 @@ impl LegalApiClient for NlicClient {
         // Start performance monitoring
         let timer = OperationTimer::start("nlic_search".to_string(), get_global_metrics());
         let metrics = get_global_metrics();
-        
+
         if self.config.api_key.is_empty() {
             timer.finish_failure();
             return Err(WarpError::NoApiKey);
@@ -233,7 +233,7 @@ impl LegalApiClient for NlicClient {
             timer.finish_success();
             return Ok(cached_response);
         }
-        
+
         metrics.record_cache_miss("nlic");
 
         // Calculate the starting position (offset) for the API

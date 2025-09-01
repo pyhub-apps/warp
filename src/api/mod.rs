@@ -48,7 +48,6 @@ impl FromStr for ApiType {
 }
 
 impl ApiType {
-
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Nlic => "nlic",

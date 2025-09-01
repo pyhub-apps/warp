@@ -1,5 +1,5 @@
-use super::{ApiType, LegalApiClient};
 use super::types::*;
+use super::{ApiType, LegalApiClient};
 use crate::error::{Result, WarpError};
 use futures::stream::{self, StreamExt};
 use std::sync::Arc;
@@ -46,12 +46,12 @@ impl ParallelSearchResult {
         if self.successes.is_empty() {
             return None;
         }
-        
+
         let mut merged_items = Vec::new();
         let mut total_count = 0u32;
         let mut page_no = 1u32;
         let mut page_size = 10u32;
-        
+
         // Collect all items from successful responses
         for (_api_type, response) in &self.successes {
             merged_items.extend(response.items.iter().cloned());
@@ -59,10 +59,10 @@ impl ParallelSearchResult {
             page_no = response.page_no; // Use last response's page info
             page_size = response.page_size;
         }
-        
+
         // Sort items by relevance (you might want to implement custom scoring)
         // For now, we'll just maintain order and add source diversity
-        
+
         Some(SearchResponse {
             total_count,
             page_no,
@@ -72,7 +72,7 @@ impl ParallelSearchResult {
             timestamp: chrono::Utc::now(),
         })
     }
-    
+
     /// Get summary statistics of the parallel operation
     pub fn get_summary(&self) -> ParallelSummary {
         ParallelSummary {
@@ -104,14 +104,14 @@ impl ParallelExecutor {
     pub fn new(config: ParallelConfig) -> Self {
         Self { config }
     }
-    
+
     /// Create a parallel executor with default configuration
     pub fn default() -> Self {
         Self {
             config: ParallelConfig::default(),
         }
     }
-    
+
     /// Execute search requests across multiple APIs in parallel
     pub async fn search_parallel(
         &self,
@@ -121,9 +121,9 @@ impl ParallelExecutor {
         if clients.is_empty() {
             return Err(WarpError::InvalidInput("No clients provided".to_string()));
         }
-        
+
         let start_time = std::time::Instant::now();
-        
+
         // Create futures for each API call
         let search_futures: Vec<_> = clients
             .into_iter()
@@ -132,54 +132,56 @@ impl ParallelExecutor {
                 async move {
                     // Add timeout to individual requests
                     let search_future = client.search(request);
-                    
+
                     match tokio::time::timeout(self.config.request_timeout, search_future).await {
                         Ok(result) => (api_type, result),
                         Err(_) => (
                             api_type,
-                            Err(WarpError::Timeout(self.config.request_timeout.as_millis() as u64)),
+                            Err(WarpError::Timeout(
+                                self.config.request_timeout.as_millis() as u64
+                            )),
                         ),
                     }
                 }
             })
             .collect();
-        
+
         // Execute with controlled concurrency
         let results: Vec<(ApiType, Result<SearchResponse>)> = stream::iter(search_futures)
             .buffer_unordered(self.config.max_concurrent)
             .collect()
             .await;
-        
+
         // Add delay between batches if configured
         if self.config.batch_delay > Duration::ZERO {
             tokio::time::sleep(self.config.batch_delay).await;
         }
-        
+
         let execution_time = start_time.elapsed();
-        
+
         // Separate successes and failures
         let mut successes = Vec::new();
         let mut failures = Vec::new();
-        
+
         for (api_type, result) in results {
             match result {
                 Ok(response) => successes.push((api_type, response)),
                 Err(error) => failures.push((api_type, error)),
             }
         }
-        
+
         // If fail_fast is enabled and we have failures, return early
         if self.config.fail_fast && !failures.is_empty() {
             return Err(failures.into_iter().next().unwrap().1);
         }
-        
+
         Ok(ParallelSearchResult {
             successes,
             failures,
             execution_time,
         })
     }
-    
+
     /// Execute detail requests in parallel (for batch lookups)
     pub async fn get_details_parallel(
         &self,
@@ -189,7 +191,7 @@ impl ParallelExecutor {
         if ids.is_empty() {
             return Ok(Vec::new());
         }
-        
+
         // Create futures for each detail request
         let detail_futures: Vec<_> = ids
             .into_iter()
@@ -202,26 +204,28 @@ impl ParallelExecutor {
                         client.get_detail(&id_clone),
                     )
                     .await;
-                    
+
                     let detail_result = match result {
                         Ok(detail_result) => detail_result,
-                        Err(_) => Err(WarpError::Timeout(self.config.request_timeout.as_millis() as u64)),
+                        Err(_) => Err(WarpError::Timeout(
+                            self.config.request_timeout.as_millis() as u64
+                        )),
                     };
-                    
+
                     (id, detail_result)
                 }
             })
             .collect();
-        
+
         // Execute with controlled concurrency
         let results: Vec<(String, Result<LawDetail>)> = stream::iter(detail_futures)
             .buffer_unordered(self.config.max_concurrent)
             .collect()
             .await;
-        
+
         Ok(results)
     }
-    
+
     /// Execute a single request with retry logic
     pub async fn execute_with_retry<F, T>(&self, mut operation: F) -> Result<T>
     where
@@ -230,13 +234,13 @@ impl ParallelExecutor {
     {
         const MAX_RETRIES: usize = 3;
         let mut last_error = None;
-        
+
         for attempt in 0..MAX_RETRIES {
             match operation().await {
                 Ok(result) => return Ok(result),
                 Err(error) => {
                     last_error = Some(error);
-                    
+
                     if attempt < MAX_RETRIES - 1 {
                         // Exponential backoff
                         let delay = Duration::from_millis(100 * (2_u64.pow(attempt as u32)));
@@ -245,7 +249,7 @@ impl ParallelExecutor {
                 }
             }
         }
-        
+
         Err(last_error.unwrap())
     }
 }
@@ -271,7 +275,7 @@ pub async fn search_with_rate_limit(
         batch_delay: delay_between_requests,
         ..ParallelConfig::default()
     };
-    
+
     let executor = ParallelExecutor::new(config);
     executor.search_parallel(clients, request).await
 }
@@ -282,14 +286,14 @@ mod tests {
     use crate::api::client::ClientConfig;
     use async_trait::async_trait;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    
+
     // Mock client for testing
     struct MockClient {
         delay: Duration,
         should_fail: bool,
         call_count: Arc<AtomicUsize>,
     }
-    
+
     impl MockClient {
         fn new(delay: Duration, should_fail: bool) -> Self {
             Self {
@@ -299,14 +303,14 @@ mod tests {
             }
         }
     }
-    
+
     #[async_trait]
     impl LegalApiClient for MockClient {
         async fn search(&self, _request: UnifiedSearchRequest) -> Result<SearchResponse> {
             self.call_count.fetch_add(1, Ordering::Relaxed);
-            
+
             tokio::time::sleep(self.delay).await;
-            
+
             if self.should_fail {
                 Err(WarpError::ApiError {
                     code: "TEST_ERROR".to_string(),
@@ -324,55 +328,77 @@ mod tests {
                 })
             }
         }
-        
+
         async fn get_detail(&self, _id: &str) -> Result<LawDetail> {
             unimplemented!("Mock detail not implemented")
         }
-        
+
         async fn get_history(&self, _id: &str) -> Result<LawHistory> {
             unimplemented!("Mock history not implemented")
         }
-        
-        fn api_type(&self) -> ApiType { ApiType::Nlic }
-        fn base_url(&self) -> &str { "http://mock" }
-        fn is_configured(&self) -> bool { true }
+
+        fn api_type(&self) -> ApiType {
+            ApiType::Nlic
+        }
+        fn base_url(&self) -> &str {
+            "http://mock"
+        }
+        fn is_configured(&self) -> bool {
+            true
+        }
     }
-    
+
     #[tokio::test]
     async fn test_parallel_search_success() {
         let clients = vec![
-            (ApiType::Nlic, Arc::new(MockClient::new(Duration::from_millis(100), false)) as Arc<dyn LegalApiClient>),
-            (ApiType::Elis, Arc::new(MockClient::new(Duration::from_millis(150), false)) as Arc<dyn LegalApiClient>),
+            (
+                ApiType::Nlic,
+                Arc::new(MockClient::new(Duration::from_millis(100), false))
+                    as Arc<dyn LegalApiClient>,
+            ),
+            (
+                ApiType::Elis,
+                Arc::new(MockClient::new(Duration::from_millis(150), false))
+                    as Arc<dyn LegalApiClient>,
+            ),
         ];
-        
+
         let request = UnifiedSearchRequest {
             query: "test".to_string(),
             ..Default::default()
         };
-        
+
         let executor = ParallelExecutor::default();
         let result = executor.search_parallel(clients, request).await.unwrap();
-        
+
         assert_eq!(result.successes.len(), 2);
         assert_eq!(result.failures.len(), 0);
         assert!(result.execution_time < Duration::from_millis(300)); // Should be faster than sequential
     }
-    
+
     #[tokio::test]
     async fn test_parallel_search_with_failures() {
         let clients = vec![
-            (ApiType::Nlic, Arc::new(MockClient::new(Duration::from_millis(50), false)) as Arc<dyn LegalApiClient>),
-            (ApiType::Elis, Arc::new(MockClient::new(Duration::from_millis(50), true)) as Arc<dyn LegalApiClient>),
+            (
+                ApiType::Nlic,
+                Arc::new(MockClient::new(Duration::from_millis(50), false))
+                    as Arc<dyn LegalApiClient>,
+            ),
+            (
+                ApiType::Elis,
+                Arc::new(MockClient::new(Duration::from_millis(50), true))
+                    as Arc<dyn LegalApiClient>,
+            ),
         ];
-        
+
         let request = UnifiedSearchRequest {
             query: "test".to_string(),
             ..Default::default()
         };
-        
+
         let executor = ParallelExecutor::default();
         let result = executor.search_parallel(clients, request).await.unwrap();
-        
+
         assert_eq!(result.successes.len(), 1);
         assert_eq!(result.failures.len(), 1);
     }

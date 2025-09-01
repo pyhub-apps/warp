@@ -1,8 +1,8 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use tokio::runtime::Runtime;
-use warp::api::{ApiClientFactory, ApiType};
 use warp::api::client::ClientConfig;
 use warp::api::types::{ResponseType, UnifiedSearchRequest};
+use warp::api::{ApiClientFactory, ApiType};
 use warp::cache::CacheConfig;
 use warp::metrics::get_global_metrics;
 
@@ -33,7 +33,7 @@ fn create_test_config(enable_cache: bool) -> ClientConfig {
 fn bench_single_search_no_cache(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let config = create_test_config(false);
-    
+
     c.bench_function("single_search_no_cache", |b| {
         b.iter(|| {
             let client = ApiClientFactory::create(ApiType::Nlic, config.clone()).unwrap();
@@ -44,7 +44,7 @@ fn bench_single_search_no_cache(c: &mut Criterion) {
                 response_type: ResponseType::Json,
                 ..Default::default()
             };
-            
+
             // Note: This will fail without real API key, but measures setup overhead
             let _ = rt.block_on(client.search(request));
         });
@@ -55,7 +55,7 @@ fn bench_single_search_no_cache(c: &mut Criterion) {
 fn bench_single_search_with_cache(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let config = create_test_config(true);
-    
+
     c.bench_function("single_search_with_cache", |b| {
         b.iter(|| {
             let client = ApiClientFactory::create(ApiType::Nlic, config.clone()).unwrap();
@@ -66,7 +66,7 @@ fn bench_single_search_with_cache(c: &mut Criterion) {
                 response_type: ResponseType::Json,
                 ..Default::default()
             };
-            
+
             let _ = rt.block_on(client.search(request));
         });
     });
@@ -76,11 +76,15 @@ fn bench_single_search_with_cache(c: &mut Criterion) {
 fn bench_client_creation(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let mut group = c.benchmark_group("client_creation");
-    
+
     for cache_enabled in [false, true] {
         let config = create_test_config(cache_enabled);
-        let name = if cache_enabled { "with_cache" } else { "no_cache" };
-        
+        let name = if cache_enabled {
+            "with_cache"
+        } else {
+            "no_cache"
+        };
+
         group.bench_with_input(
             BenchmarkId::new("api_client_factory", name),
             &config,
@@ -95,7 +99,7 @@ fn bench_client_creation(c: &mut Criterion) {
                         response_type: ResponseType::Json,
                         ..Default::default()
                     };
-                    
+
                     let _ = rt.block_on(client.search(request));
                 });
             },
@@ -108,14 +112,14 @@ fn bench_client_creation(c: &mut Criterion) {
 fn bench_cache_operations(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let config = create_test_config(true);
-    
+
     c.bench_function("cache_operations", |b| {
         b.iter(|| {
             // Test metrics collection overhead
             let metrics = get_global_metrics();
             metrics.record_request(black_box("test_api"));
             metrics.record_success(black_box("test_api"));
-            
+
             let client = ApiClientFactory::create(ApiType::Nlic, config.clone()).unwrap();
             let request = UnifiedSearchRequest {
                 query: black_box("cache_test".to_string()),
@@ -124,7 +128,7 @@ fn bench_cache_operations(c: &mut Criterion) {
                 response_type: ResponseType::Json,
                 ..Default::default()
             };
-            
+
             // Measure cache key generation and lookup overhead
             let _ = rt.block_on(client.search(request));
         });
@@ -135,7 +139,7 @@ fn bench_cache_operations(c: &mut Criterion) {
 fn bench_memory_patterns(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let config = create_test_config(false);
-    
+
     c.bench_function("memory_allocation", |b| {
         b.iter(|| {
             // Test memory allocation patterns in API client creation
@@ -148,7 +152,7 @@ fn bench_memory_patterns(c: &mut Criterion) {
                     response_type: ResponseType::Json,
                     ..Default::default()
                 };
-                
+
                 let _ = rt.block_on(client.search(request));
             }
         });

@@ -1,5 +1,5 @@
-use super::{LegalApiClient, ApiType};
 use super::types::*;
+use super::{ApiType, LegalApiClient};
 use crate::error::{Result, WarpError};
 use futures::stream::{self, Stream, StreamExt};
 use std::pin::Pin;
@@ -53,7 +53,7 @@ impl SearchResultStream {
     ) -> Self {
         // Ensure page size matches config
         request.page_size = config.page_size;
-        
+
         Self {
             client,
             base_request: request,
@@ -64,19 +64,19 @@ impl SearchResultStream {
             finished: false,
         }
     }
-    
+
     /// Convert to a stream of individual SearchItem
     pub fn into_item_stream(self) -> impl Stream<Item = Result<SearchItem>> {
         stream::unfold(self, |mut state| async move {
             if state.finished {
                 return None;
             }
-            
+
             // Check if we've reached the maximum items limit
             if state.config.max_items > 0 && state.items_fetched >= state.config.max_items {
                 return None;
             }
-            
+
             // Fetch next page
             match state.fetch_next_page().await {
                 Ok(Some(response)) => {
@@ -84,23 +84,22 @@ impl SearchResultStream {
                     if state.total_count.is_none() {
                         state.total_count = Some(response.total_count);
                     }
-                    
+
                     state.items_fetched += response.items.len() as u32;
                     state.current_page += 1;
-                    
+
                     // Check if we should continue
-                    if response.items.is_empty() || 
-                       (state.total_count.is_some() && 
-                        state.items_fetched >= state.total_count.unwrap()) {
+                    if response.items.is_empty()
+                        || (state.total_count.is_some()
+                            && state.items_fetched >= state.total_count.unwrap())
+                    {
                         state.finished = true;
                     }
-                    
+
                     // Return items from this page
-                    let items: Vec<Result<SearchItem>> = response.items
-                        .into_iter()
-                        .map(Ok)
-                        .collect();
-                    
+                    let items: Vec<Result<SearchItem>> =
+                        response.items.into_iter().map(Ok).collect();
+
                     Some((stream::iter(items), state))
                 }
                 Ok(None) => {
@@ -115,36 +114,37 @@ impl SearchResultStream {
         })
         .flatten()
     }
-    
+
     /// Convert to a stream of pages (SearchResponse)
     pub fn into_page_stream(self) -> impl Stream<Item = Result<SearchResponse>> {
         stream::unfold(self, |mut state| async move {
             if state.finished {
                 return None;
             }
-            
+
             match state.fetch_next_page().await {
                 Ok(Some(response)) => {
                     // Update state
                     if state.total_count.is_none() {
                         state.total_count = Some(response.total_count);
                     }
-                    
+
                     state.items_fetched += response.items.len() as u32;
                     state.current_page += 1;
-                    
+
                     // Check if we should continue
-                    if response.items.is_empty() || 
-                       (state.total_count.is_some() && 
-                        state.items_fetched >= state.total_count.unwrap()) {
+                    if response.items.is_empty()
+                        || (state.total_count.is_some()
+                            && state.items_fetched >= state.total_count.unwrap())
+                    {
                         state.finished = true;
                     }
-                    
+
                     // Add delay between requests
                     if state.config.page_delay > Duration::ZERO && !state.finished {
                         tokio::time::sleep(state.config.page_delay).await;
                     }
-                    
+
                     Some((Ok(response), state))
                 }
                 Ok(None) => {
@@ -158,17 +158,17 @@ impl SearchResultStream {
             }
         })
     }
-    
+
     async fn fetch_next_page(&self) -> Result<Option<SearchResponse>> {
         // Check if we've reached the maximum items limit
         if self.config.max_items > 0 && self.items_fetched >= self.config.max_items {
             return Ok(None);
         }
-        
+
         let mut request = self.base_request.clone();
         request.page_no = self.current_page;
         request.page_size = self.config.page_size;
-        
+
         match self.client.search(request).await {
             Ok(response) => {
                 if response.items.is_empty() {
@@ -180,7 +180,7 @@ impl SearchResultStream {
             Err(e) => Err(e),
         }
     }
-    
+
     /// Get current streaming statistics
     pub fn get_stats(&self) -> StreamStats {
         StreamStats {
@@ -231,19 +231,20 @@ impl ParallelSearchStream {
             .into_iter()
             .map(|(_api_type, client)| {
                 let stream = SearchResultStream::new(client, request.clone(), config.clone());
-                Box::pin(stream.into_item_stream()) as Pin<Box<dyn Stream<Item = Result<SearchItem>> + Send>>
+                Box::pin(stream.into_item_stream())
+                    as Pin<Box<dyn Stream<Item = Result<SearchItem>> + Send>>
             })
             .collect();
-        
+
         Self { streams, config }
     }
-    
+
     /// Merge all streams into a single stream with round-robin fairness
     pub fn merge_fair(self) -> impl Stream<Item = Result<SearchItem>> {
         // Use select_all for fair merging
         stream::select_all(self.streams)
     }
-    
+
     /// Merge all streams with buffering for better performance  
     pub fn merge_buffered(self) -> impl Stream<Item = Result<SearchItem>> {
         // Note: buffered() requires items to be futures, not results
@@ -275,8 +276,7 @@ pub fn batch_stream<T>(
     stream: impl Stream<Item = T>,
     batch_size: usize,
 ) -> impl Stream<Item = Vec<T>> {
-    stream
-        .ready_chunks(batch_size)
+    stream.ready_chunks(batch_size)
 }
 
 /// Rate-limited stream wrapper
@@ -288,7 +288,7 @@ pub fn rate_limit_stream<T>(
     let intervals = stream::repeat(()).then(move |_| async move {
         tokio::time::sleep(rate_limit).await;
     });
-    
+
     stream.zip(intervals).map(|(item, _)| item)
 }
 
@@ -298,7 +298,7 @@ mod tests {
     use crate::api::client::ClientConfig;
     use async_trait::async_trait;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    
+
     // Mock client for testing streaming
     struct MockStreamClient {
         total_items: u32,
@@ -306,7 +306,7 @@ mod tests {
         delay: Duration,
         call_count: Arc<AtomicUsize>,
     }
-    
+
     impl MockStreamClient {
         fn new(total_items: u32, page_size: u32, delay: Duration) -> Self {
             Self {
@@ -317,18 +317,21 @@ mod tests {
             }
         }
     }
-    
+
     #[async_trait]
     impl LegalApiClient for MockStreamClient {
         async fn search(&self, request: UnifiedSearchRequest) -> Result<SearchResponse> {
             self.call_count.fetch_add(1, Ordering::Relaxed);
-            
+
             // Simulate network delay
             tokio::time::sleep(self.delay).await;
-            
+
             let start_idx = ((request.page_no - 1) * request.page_size) as usize;
-            let end_idx = std::cmp::min(start_idx + request.page_size as usize, self.total_items as usize);
-            
+            let end_idx = std::cmp::min(
+                start_idx + request.page_size as usize,
+                self.total_items as usize,
+            );
+
             let items: Vec<SearchItem> = (start_idx..end_idx)
                 .map(|i| SearchItem {
                     id: format!("item_{}", i),
@@ -343,7 +346,7 @@ mod tests {
                     metadata: std::collections::HashMap::new(),
                 })
                 .collect();
-            
+
             Ok(SearchResponse {
                 total_count: self.total_items,
                 page_no: request.page_no,
@@ -353,20 +356,26 @@ mod tests {
                 timestamp: chrono::Utc::now(),
             })
         }
-        
+
         async fn get_detail(&self, _id: &str) -> Result<LawDetail> {
             unimplemented!()
         }
-        
+
         async fn get_history(&self, _id: &str) -> Result<LawHistory> {
             unimplemented!()
         }
-        
-        fn api_type(&self) -> ApiType { ApiType::Nlic }
-        fn base_url(&self) -> &str { "http://mock" }
-        fn is_configured(&self) -> bool { true }
+
+        fn api_type(&self) -> ApiType {
+            ApiType::Nlic
+        }
+        fn base_url(&self) -> &str {
+            "http://mock"
+        }
+        fn is_configured(&self) -> bool {
+            true
+        }
     }
-    
+
     #[tokio::test]
     async fn test_search_result_stream() {
         let client = Arc::new(MockStreamClient::new(250, 50, Duration::from_millis(10)));
@@ -375,54 +384,62 @@ mod tests {
             page_size: 50,
             ..Default::default()
         };
-        
+
         let config = StreamConfig {
             page_size: 50,
             max_items: 100, // Limit to first 100 items
             ..StreamConfig::default()
         };
-        
+
         let stream = SearchResultStream::new(client.clone(), request, config);
         let items: Vec<Result<SearchItem>> = stream.into_item_stream().collect().await;
-        
+
         assert_eq!(items.len(), 100);
         assert!(items.iter().all(|item| item.is_ok()));
-        
+
         // Should have made 2 API calls (100 items / 50 per page)
         assert_eq!(client.call_count.load(Ordering::Relaxed), 2);
     }
-    
+
     #[tokio::test]
     async fn test_parallel_search_stream() {
         let clients = vec![
-            (ApiType::Nlic, Arc::new(MockStreamClient::new(100, 25, Duration::from_millis(5))) as Arc<dyn LegalApiClient>),
-            (ApiType::Elis, Arc::new(MockStreamClient::new(150, 25, Duration::from_millis(5))) as Arc<dyn LegalApiClient>),
+            (
+                ApiType::Nlic,
+                Arc::new(MockStreamClient::new(100, 25, Duration::from_millis(5)))
+                    as Arc<dyn LegalApiClient>,
+            ),
+            (
+                ApiType::Elis,
+                Arc::new(MockStreamClient::new(150, 25, Duration::from_millis(5)))
+                    as Arc<dyn LegalApiClient>,
+            ),
         ];
-        
+
         let request = UnifiedSearchRequest {
             query: "test".to_string(),
             page_size: 25,
             ..Default::default()
         };
-        
+
         let config = StreamConfig {
             page_size: 25,
             max_items: 50, // 50 items from each API
             ..StreamConfig::default()
         };
-        
+
         let stream = ParallelSearchStream::new(clients, request, config);
         let items: Vec<Result<SearchItem>> = stream.merge_fair().collect().await;
-        
+
         assert_eq!(items.len(), 100); // 50 items from each API
         assert!(items.iter().all(|item| item.is_ok()));
     }
-    
+
     #[tokio::test]
     async fn test_stream_batching() {
         let items = stream::iter(0..100);
         let batches: Vec<Vec<i32>> = batch_stream(items, 10).collect().await;
-        
+
         assert_eq!(batches.len(), 10);
         assert_eq!(batches[0].len(), 10);
         assert_eq!(batches[9].len(), 10);
