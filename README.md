@@ -17,22 +17,29 @@
 - 🔄 **재시도 로직**: 지수 백오프를 통한 안정적인 API 호출
 - 🔒 **보안**: API 키를 안전하게 관리 (파일 권한 0600)
 
+## 📚 문서
+
+- **[한국어 문서](docs/ko/)** - 상세한 한국어 가이드
+  - [설치 가이드](docs/ko/installation.md) - 시스템별 설치 방법
+  - [사용자 가이드](docs/ko/user-guide.md) - 전체 기능 설명
+  - [사용 예제](docs/ko/examples.md) - 실제 사용 시나리오
+  - [문제 해결](docs/ko/troubleshooting.md) - 일반적인 문제 해결
+  - [FAQ](docs/ko/faq.md) - 자주 묻는 질문
+
 ## 📦 설치
 
-### 소스에서 빌드
+자세한 설치 방법은 [설치 가이드](docs/ko/installation.md)를 참조하세요.
+
+### 빠른 설치
 
 ```bash
+# Cargo를 통한 설치 (준비 중)
+cargo install warp
+
+# 또는 소스에서 빌드
 git clone https://github.com/pyhub-apps/warp.git
 cd warp
 cargo build --release
-
-# 바이너리는 ./target/release/warp 에 생성됩니다
-```
-
-### Cargo를 통한 설치 (준비 중)
-
-```bash
-cargo install warp
 ```
 
 ## 🚀 빠른 시작
@@ -67,6 +74,8 @@ warp search "개인정보보호"
 ```
 
 ## 📖 사용법
+
+더 자세한 사용법은 [사용자 가이드](docs/ko/user-guide.md)와 [사용 예제](docs/ko/examples.md)를 참조하세요.
 
 ### 검색 명령어
 
@@ -158,6 +167,14 @@ warp config set law.key NEW_API_KEY
 
 ```
 warp/
+├── docs/                    # 📚 문서
+│   └── ko/                  # 한국어 문서
+│       ├── README.md        # 문서 메인
+│       ├── installation.md  # 설치 가이드
+│       ├── user-guide.md    # 사용자 가이드
+│       ├── examples.md      # 사용 예제
+│       ├── troubleshooting.md # 문제 해결
+│       └── faq.md           # FAQ
 ├── src/
 │   ├── main.rs              # 진입점
 │   ├── lib.rs               # 라이브러리 루트
