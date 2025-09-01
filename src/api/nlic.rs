@@ -1,18 +1,18 @@
 use async_trait::async_trait;
 use chrono::Utc;
+use log::{debug, info, warn};
 use reqwest::{Client, Response};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::sleep;
-use log::{debug, info, warn};
 
-use crate::error::{Result, WarpError};
-use crate::cache::key::CacheKeyGenerator;
-use super::{ApiType, LegalApiClient};
-use super::deserializers::single_or_vec;
 use super::client::ClientConfig;
+use super::deserializers::single_or_vec;
 use super::types::*;
+use super::{ApiType, LegalApiClient};
+use crate::cache::key::CacheKeyGenerator;
+use crate::error::{Result, WarpError};
 
 const BASE_URL: &str = "https://www.law.go.kr/DRF/lawService.do";
 const SEARCH_URL: &str = "https://www.law.go.kr/DRF/lawSearch.do";
@@ -51,7 +51,10 @@ impl NlicClient {
                             return Ok(Some(response));
                         }
                         Err(e) => {
-                            warn!("Failed to deserialize cached response: {}, removing from cache", e);
+                            warn!(
+                                "Failed to deserialize cached response: {}, removing from cache",
+                                e
+                            );
                             let _ = cache.remove(cache_key).await;
                         }
                     }
@@ -72,7 +75,10 @@ impl NlicClient {
                 debug!("Storing response in cache for key: {}", cache_key);
                 match serde_json::to_vec(response) {
                     Ok(serialized) => {
-                        if let Err(e) = cache.put(cache_key, serialized, self.api_type(), None).await {
+                        if let Err(e) = cache
+                            .put(cache_key, serialized, self.api_type(), None)
+                            .await
+                        {
                             warn!("Failed to store response in cache: {}", e);
                         } else {
                             info!("Successfully cached search response");
@@ -105,13 +111,17 @@ impl NlicClient {
                     } else if response.status().as_u16() == 429 {
                         last_error = Some(WarpError::RateLimit);
                     } else if response.status().is_server_error() {
-                        last_error = Some(WarpError::ServerError(
-                            format!("Server returned status {}", response.status())
-                        ));
+                        last_error = Some(WarpError::ServerError(format!(
+                            "Server returned status {}",
+                            response.status()
+                        )));
                     } else {
                         return Err(WarpError::ApiError {
                             code: response.status().to_string(),
-                            message: format!("API request failed with status {}", response.status()),
+                            message: format!(
+                                "API request failed with status {}",
+                                response.status()
+                            ),
                             hint: None,
                         });
                     }
@@ -122,25 +132,31 @@ impl NlicClient {
             }
         }
 
-        Err(last_error.unwrap_or_else(|| {
-            WarpError::Other("Request failed after all retries".to_string())
-        }))
+        Err(last_error
+            .unwrap_or_else(|| WarpError::Other("Request failed after all retries".to_string())))
     }
 
     /// Parse NLIC search response
-    fn parse_search_response(&self, raw: NlicSearchResponse, requested_page: u32) -> SearchResponse {
+    fn parse_search_response(
+        &self,
+        raw: NlicSearchResponse,
+        requested_page: u32,
+    ) -> SearchResponse {
         // Handle nested structure or direct structure
-        let (laws, total_count, page_no, page_size) = if let Some(search_data) = raw.law_search {
+        let (laws, total_count, _page_no, page_size) = if let Some(search_data) = raw.law_search {
             // New nested structure - parse strings to numbers
             (
                 search_data.laws,
-                search_data.total_count
+                search_data
+                    .total_count
                     .and_then(|s| s.parse::<u32>().ok())
                     .unwrap_or(0),
-                search_data.page_no
+                search_data
+                    .page_no
                     .and_then(|s| s.parse::<u32>().ok())
                     .unwrap_or(1),
-                search_data.page_size
+                search_data
+                    .page_size
                     .and_then(|s| s.parse::<u32>().ok())
                     .unwrap_or(50),
             )
@@ -153,33 +169,36 @@ impl NlicClient {
                 raw.page_size.unwrap_or(50),
             )
         };
-        
-        let items = laws.into_iter().map(|law| {
-            let mut metadata = HashMap::new();
-            if let Some(ref detail) = law.law_detail_link {
-                metadata.insert("detail_link".to_string(), detail.clone());
-            }
-            if let Some(ref full) = law.law_full_link {
-                metadata.insert("full_link".to_string(), full.clone());
-            }
 
-            SearchItem {
-                id: law.law_id,
-                title: law.law_name,
-                law_no: law.law_no,
-                law_type: law.law_type,
-                department: law.department,
-                enforcement_date: law.enforcement_date,
-                revision_date: law.revision_date,
-                summary: law.law_summary,
-                source: "NLIC".to_string(),
-                metadata,
-            }
-        }).collect();
+        let items = laws
+            .into_iter()
+            .map(|law| {
+                let mut metadata = HashMap::new();
+                if let Some(ref detail) = law.law_detail_link {
+                    metadata.insert("detail_link".to_string(), detail.clone());
+                }
+                if let Some(ref full) = law.law_full_link {
+                    metadata.insert("full_link".to_string(), full.clone());
+                }
+
+                SearchItem {
+                    id: law.law_id,
+                    title: law.law_name,
+                    law_no: law.law_no,
+                    law_type: law.law_type,
+                    department: law.department,
+                    enforcement_date: law.enforcement_date,
+                    revision_date: law.revision_date,
+                    summary: law.law_summary,
+                    source: "NLIC".to_string(),
+                    metadata,
+                }
+            })
+            .collect();
 
         SearchResponse {
             total_count,
-            page_no: requested_page,  // Use the requested page number, not the API's offset
+            page_no: requested_page, // Use the requested page number, not the API's offset
             page_size,
             items,
             source: "NLIC".to_string(),
@@ -214,13 +233,13 @@ impl LegalApiClient for NlicClient {
         // For page 1 with size 10, offset should be 1
         // For page 2 with size 10, offset should be 11
         let offset = ((request.page_no - 1) * request.page_size) + 1;
-        
+
         let mut params = vec![
             ("OC", self.config.api_key.clone()),
             ("target", "law".to_string()),
             ("type", "JSON".to_string()),
             ("query", request.query.clone()),
-            ("page", offset.to_string()),  // Use offset instead of page number
+            ("page", offset.to_string()), // Use offset instead of page number
             ("display", request.page_size.to_string()),
         ];
 
@@ -238,22 +257,21 @@ impl LegalApiClient for NlicClient {
         // Build URL with query parameters
         let url = reqwest::Url::parse_with_params(SEARCH_URL, &params)
             .map_err(|e| WarpError::Parse(e.to_string()))?;
-        
 
         let response = self.execute_with_retry(url.to_string()).await?;
-        
+
         // Check response status and content type
-        let content_type = response.headers()
+        let content_type = response
+            .headers()
             .get("content-type")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("");
-        
+
         let is_html = content_type.contains("text/html");
-        
+
         // Get response text for better error reporting
-        let response_text = response.text().await
-            .map_err(|e| WarpError::Network(e))?;
-        
+        let response_text = response.text().await.map_err(WarpError::Network)?;
+
         // Check if response is HTML (common when API key is invalid)
         if is_html || response_text.starts_with("<") {
             return Err(WarpError::ApiError {
@@ -262,40 +280,47 @@ impl LegalApiClient for NlicClient {
                 hint: Some("Please check your API key with 'warp config get law.nlic.key' and ensure it's valid.".to_string()),
             });
         }
-        
+
         // Check if response is empty
         if response_text.trim().is_empty() {
             return Err(WarpError::ApiError {
                 code: "EMPTY_RESPONSE".to_string(),
                 message: "API returned an empty response.".to_string(),
-                hint: Some("This might indicate an invalid API key or server issue. Try again later.".to_string()),
+                hint: Some(
+                    "This might indicate an invalid API key or server issue. Try again later."
+                        .to_string(),
+                ),
             });
         }
-        
+
         // Try to parse JSON
-        let raw: NlicSearchResponse = serde_json::from_str(&response_text)
-            .map_err(|e| {
-                // Try to provide more context about the error
-                if response_text.contains("error") || response_text.contains("Error") {
-                    WarpError::ApiError {
-                        code: "API_ERROR".to_string(),
-                        message: format!("API returned an error: {}", response_text.chars().take(200).collect::<String>()),
-                        hint: Some("Check your API key and request parameters.".to_string()),
-                    }
-                } else {
-                    WarpError::Parse(format!("Failed to parse API response as JSON: {}. Response starts with: {}", 
-                        e, 
-                        response_text.chars().take(100).collect::<String>()))
+        let raw: NlicSearchResponse = serde_json::from_str(&response_text).map_err(|e| {
+            // Try to provide more context about the error
+            if response_text.contains("error") || response_text.contains("Error") {
+                WarpError::ApiError {
+                    code: "API_ERROR".to_string(),
+                    message: format!(
+                        "API returned an error: {}",
+                        response_text.chars().take(200).collect::<String>()
+                    ),
+                    hint: Some("Check your API key and request parameters.".to_string()),
                 }
-            })?;
+            } else {
+                WarpError::Parse(format!(
+                    "Failed to parse API response as JSON: {}. Response starts with: {}",
+                    e,
+                    response_text.chars().take(100).collect::<String>()
+                ))
+            }
+        })?;
 
         let response = self.parse_search_response(raw, request.page_no);
-        
+
         // Store in cache
         if let Err(e) = self.store_in_cache(&cache_key, &response).await {
             warn!("Failed to cache response: {}", e);
         }
-        
+
         Ok(response)
     }
 
@@ -303,10 +328,10 @@ impl LegalApiClient for NlicClient {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
         }
-        
+
         // Generate cache key for detail request
         let cache_key = format!("{}:detail:{}", self.api_type().as_str(), id);
-        
+
         // Check cache for detail response
         if let Some(ref cache) = self.config.cache {
             if !self.config.bypass_cache {
@@ -319,7 +344,10 @@ impl LegalApiClient for NlicClient {
                             return Ok(detail);
                         }
                         Err(e) => {
-                            warn!("Failed to deserialize cached detail: {}, removing from cache", e);
+                            warn!(
+                                "Failed to deserialize cached detail: {}, removing from cache",
+                                e
+                            );
                             let _ = cache.remove(&cache_key).await;
                         }
                     }
@@ -341,11 +369,10 @@ impl LegalApiClient for NlicClient {
             .map_err(|e| WarpError::Parse(e.to_string()))?;
 
         let response = self.execute_with_retry(url.to_string()).await?;
-        
+
         // Get response text for better error reporting
-        let response_text = response.text().await
-            .map_err(|e| WarpError::Network(e))?;
-        
+        let response_text = response.text().await.map_err(WarpError::Network)?;
+
         // Check if response is HTML or empty
         if response_text.starts_with("<") {
             return Err(WarpError::ApiError {
@@ -354,20 +381,23 @@ impl LegalApiClient for NlicClient {
                 hint: Some("Please check your API key configuration.".to_string()),
             });
         }
-        
+
         let raw: NlicDetailResponse = serde_json::from_str(&response_text)
             .map_err(|e| WarpError::Parse(format!("Failed to parse detail response: {}", e)))?;
 
         // Convert NLIC response to unified format
         let detail = raw.law.into_law_detail();
-        
+
         // Store detail in cache
         if let Some(ref cache) = self.config.cache {
             if !self.config.bypass_cache {
                 debug!("Storing detail in cache for key: {}", cache_key);
                 match serde_json::to_vec(&detail) {
                     Ok(serialized) => {
-                        if let Err(e) = cache.put(&cache_key, serialized, self.api_type(), None).await {
+                        if let Err(e) = cache
+                            .put(&cache_key, serialized, self.api_type(), None)
+                            .await
+                        {
                             warn!("Failed to store detail in cache: {}", e);
                         } else {
                             info!("Successfully cached law detail");
@@ -379,7 +409,7 @@ impl LegalApiClient for NlicClient {
                 }
             }
         }
-        
+
         Ok(detail)
     }
 
@@ -387,10 +417,10 @@ impl LegalApiClient for NlicClient {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
         }
-        
+
         // Generate cache key for history request
         let cache_key = format!("{}:history:{}", self.api_type().as_str(), id);
-        
+
         // Check cache for history response
         if let Some(ref cache) = self.config.cache {
             if !self.config.bypass_cache {
@@ -403,7 +433,10 @@ impl LegalApiClient for NlicClient {
                             return Ok(history);
                         }
                         Err(e) => {
-                            warn!("Failed to deserialize cached history: {}, removing from cache", e);
+                            warn!(
+                                "Failed to deserialize cached history: {}, removing from cache",
+                                e
+                            );
                             let _ = cache.remove(&cache_key).await;
                         }
                     }
@@ -424,11 +457,10 @@ impl LegalApiClient for NlicClient {
             .map_err(|e| WarpError::Parse(e.to_string()))?;
 
         let response = self.execute_with_retry(url.to_string()).await?;
-        
+
         // Get response text for better error reporting
-        let response_text = response.text().await
-            .map_err(|e| WarpError::Network(e))?;
-        
+        let response_text = response.text().await.map_err(WarpError::Network)?;
+
         // Check if response is HTML or empty
         if response_text.starts_with("<") {
             return Err(WarpError::ApiError {
@@ -437,19 +469,22 @@ impl LegalApiClient for NlicClient {
                 hint: Some("Please check your API key configuration.".to_string()),
             });
         }
-        
+
         let raw: NlicHistoryResponse = serde_json::from_str(&response_text)
             .map_err(|e| WarpError::Parse(format!("Failed to parse history response: {}", e)))?;
 
         let history = raw.into_law_history();
-        
+
         // Store history in cache
         if let Some(ref cache) = self.config.cache {
             if !self.config.bypass_cache {
                 debug!("Storing history in cache for key: {}", cache_key);
                 match serde_json::to_vec(&history) {
                     Ok(serialized) => {
-                        if let Err(e) = cache.put(&cache_key, serialized, self.api_type(), None).await {
+                        if let Err(e) = cache
+                            .put(&cache_key, serialized, self.api_type(), None)
+                            .await
+                        {
                             warn!("Failed to store history in cache: {}", e);
                         } else {
                             info!("Successfully cached law history");
@@ -461,7 +496,7 @@ impl LegalApiClient for NlicClient {
                 }
             }
         }
-        
+
         Ok(history)
     }
 
@@ -491,22 +526,25 @@ struct NlicSearchResponse {
     page_no: Option<u32>,
     #[serde(rename = "display")]
     page_size: Option<u32>,
-    #[serde(rename = "law", default, deserialize_with = "super::deserializers::single_or_vec_or_null")]
+    #[serde(
+        rename = "law",
+        default,
+        deserialize_with = "super::deserializers::single_or_vec_or_null"
+    )]
     laws: Option<Vec<NlicLaw>>,
 }
 
 #[derive(Debug, Deserialize)]
 struct NlicSearchData {
     #[serde(rename = "totalCnt")]
-    total_count: Option<String>,  // API returns string
+    total_count: Option<String>, // API returns string
     #[serde(rename = "page")]
-    page_no: Option<String>,  // API returns string
+    page_no: Option<String>, // API returns string
     #[serde(rename = "display")]
-    page_size: Option<String>,  // API returns string
+    page_size: Option<String>, // API returns string
     #[serde(rename = "law", default, deserialize_with = "single_or_vec")]
     laws: Vec<NlicLaw>,
 }
-
 
 #[derive(Debug, Deserialize)]
 struct NlicLaw {
@@ -573,14 +611,18 @@ struct NlicArticle {
 
 impl NlicDetailContent {
     fn into_law_detail(self) -> LawDetail {
-        let articles = self.articles.into_iter().map(|a| {
-            Article {
-                number: a.article_number,
-                title: a.article_title,
-                content: a.article_content,
-                paragraphs: vec![], // TODO: Parse paragraphs from content
-            }
-        }).collect();
+        let articles = self
+            .articles
+            .into_iter()
+            .map(|a| {
+                Article {
+                    number: a.article_number,
+                    title: a.article_title,
+                    content: a.article_content,
+                    paragraphs: vec![], // TODO: Parse paragraphs from content
+                }
+            })
+            .collect();
 
         LawDetail {
             law_id: self.law_id,

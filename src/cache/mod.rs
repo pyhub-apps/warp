@@ -1,9 +1,9 @@
+use crate::api::ApiType;
+use crate::error::Result;
+use chrono::{DateTime, Duration, Utc};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::{DateTime, Utc, Duration};
-use crate::api::ApiType;
-use crate::error::Result;
 
 pub mod key;
 pub mod storage;
@@ -73,7 +73,7 @@ impl CacheStore {
         }
 
         let storage = SqliteStorage::new(&config.db_path).await?;
-        
+
         Ok(Self {
             storage: Arc::new(RwLock::new(storage)),
             config,
@@ -83,7 +83,7 @@ impl CacheStore {
     /// Get cached data by key
     pub async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
         let storage = self.storage.read().await;
-        
+
         match storage.get(key).await? {
             Some(entry) => {
                 if entry.is_valid() {
@@ -111,7 +111,7 @@ impl CacheStore {
         let now = Utc::now();
         let ttl = ttl.unwrap_or(self.config.default_ttl);
         let expires_at = now + ttl;
-        
+
         let size = data.len() as u64;
         let entry = CacheEntry {
             key: key.to_string(),
@@ -123,7 +123,7 @@ impl CacheStore {
         };
 
         let mut storage = self.storage.write().await;
-        
+
         // Check if we need to evict entries to make space
         let current_size = storage.get_total_size().await?;
         if current_size + entry.size > self.config.max_size {
@@ -155,7 +155,7 @@ impl CacheStore {
     /// Get cache statistics
     pub async fn stats(&self) -> Result<CacheStats> {
         let storage = self.storage.read().await;
-        
+
         let total_entries = storage.count_entries().await?;
         let total_size = storage.get_total_size().await?;
         let expired_entries = storage.count_expired_entries().await?;
@@ -178,14 +178,14 @@ impl CacheStore {
     async fn evict_lru(&self, storage: &mut SqliteStorage, needed_space: u64) -> Result<()> {
         let current_size = storage.get_total_size().await?;
         let target_size = self.config.max_size - needed_space;
-        
+
         if current_size <= target_size {
             return Ok(());
         }
 
         let space_to_free = current_size - target_size;
         storage.evict_lru(space_to_free).await?;
-        
+
         Ok(())
     }
 }
@@ -229,7 +229,7 @@ mod tests {
             default_ttl: Duration::minutes(5),
             db_path: temp_dir.path().join("test_cache.db"),
         };
-        
+
         let cache = CacheStore::new(config).await.unwrap();
         (cache, temp_dir)
     }
@@ -237,12 +237,15 @@ mod tests {
     #[tokio::test]
     async fn test_cache_put_and_get() {
         let (cache, _temp_dir) = create_test_cache().await;
-        
+
         let key = "test_key";
         let data = b"test_data".to_vec();
-        
-        cache.put(key, data.clone(), ApiType::Nlic, None).await.unwrap();
-        
+
+        cache
+            .put(key, data.clone(), ApiType::Nlic, None)
+            .await
+            .unwrap();
+
         let retrieved = cache.get(key).await.unwrap();
         assert_eq!(retrieved, Some(data));
     }
@@ -250,16 +253,19 @@ mod tests {
     #[tokio::test]
     async fn test_cache_expiration() {
         let (cache, _temp_dir) = create_test_cache().await;
-        
+
         let key = "test_key";
         let data = b"test_data".to_vec();
-        
+
         // Set TTL to 1 millisecond
-        cache.put(key, data, ApiType::Nlic, Some(Duration::milliseconds(1))).await.unwrap();
-        
+        cache
+            .put(key, data, ApiType::Nlic, Some(Duration::milliseconds(1)))
+            .await
+            .unwrap();
+
         // Wait for expiration
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-        
+
         let retrieved = cache.get(key).await.unwrap();
         assert_eq!(retrieved, None);
     }
@@ -272,19 +278,23 @@ mod tests {
             default_ttl: Duration::minutes(5),
             db_path: temp_dir.path().join("test_permissions.db"),
         };
-        
+
         let _cache = CacheStore::new(config.clone()).await.unwrap();
-        
+
         // On Unix systems, verify file permissions
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            
+
             let metadata = std::fs::metadata(&config.db_path).unwrap();
             let mode = metadata.permissions().mode() & 0o777;
-            
+
             // Database file should have 0600 permissions (owner read/write only)
-            assert_eq!(mode, 0o600, "Cache database should have 0600 permissions, got {:o}", mode);
+            assert_eq!(
+                mode, 0o600,
+                "Cache database should have 0600 permissions, got {:o}",
+                mode
+            );
         }
     }
 }

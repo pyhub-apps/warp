@@ -1,18 +1,18 @@
 use async_trait::async_trait;
 use chrono::Utc;
+use log::{debug, info, warn};
 use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::sleep;
-use log::{debug, info, warn};
 
-use crate::error::{Result, WarpError};
-use crate::cache::key::CacheKeyGenerator;
-use super::{ApiType, LegalApiClient};
-use super::deserializers::{single_or_vec, single_or_vec_or_null};
 use super::client::ClientConfig;
-use super::types::{UnifiedSearchRequest, SearchResponse, SearchItem, LawDetail, LawHistory};
+use super::deserializers::{single_or_vec, single_or_vec_or_null};
+use super::types::{LawDetail, LawHistory, SearchItem, SearchResponse, UnifiedSearchRequest};
+use super::{ApiType, LegalApiClient};
+use crate::cache::key::CacheKeyGenerator;
+use crate::error::{Result, WarpError};
 
 const BASE_URL: &str = "https://www.elis.go.kr/api/";
 const SEARCH_URL: &str = "https://www.elis.go.kr/api/search";
@@ -29,10 +29,10 @@ impl ElisClient {
             .timeout(Duration::from_secs(config.timeout))
             .build()
             .unwrap_or_default();
-        
+
         Self { config, client }
     }
-    
+
     /// Check cache for cached search response
     async fn check_search_cache(&self, cache_key: &str) -> Result<Option<SearchResponse>> {
         if let Some(ref cache) = self.config.cache {
@@ -59,20 +59,33 @@ impl ElisClient {
     }
 
     /// Store search response in cache
-    async fn store_search_in_cache(&self, cache_key: &str, response: &SearchResponse) -> Result<()> {
+    async fn store_search_in_cache(
+        &self,
+        cache_key: &str,
+        response: &SearchResponse,
+    ) -> Result<()> {
         if let Some(ref cache) = self.config.cache {
             if !self.config.bypass_cache {
-                debug!("Storing ELIS search response in cache for key: {}", cache_key);
+                debug!(
+                    "Storing ELIS search response in cache for key: {}",
+                    cache_key
+                );
                 match serde_json::to_vec(response) {
                     Ok(serialized) => {
-                        if let Err(e) = cache.put(cache_key, serialized, self.api_type(), None).await {
+                        if let Err(e) = cache
+                            .put(cache_key, serialized, self.api_type(), None)
+                            .await
+                        {
                             warn!("Failed to store ELIS search response in cache: {}", e);
                         } else {
                             info!("Successfully cached ELIS search response");
                         }
                     }
                     Err(e) => {
-                        warn!("Failed to serialize ELIS search response for caching: {}", e);
+                        warn!(
+                            "Failed to serialize ELIS search response for caching: {}",
+                            e
+                        );
                     }
                 }
             }
@@ -83,25 +96,29 @@ impl ElisClient {
     /// Execute HTTP request with retry logic
     async fn execute_with_retry(&self, url: String) -> Result<reqwest::Response> {
         let mut last_error = None;
-        
+
         for attempt in 0..self.config.max_retries {
             if attempt > 0 {
                 let delay = Duration::from_secs(2_u64.pow(attempt));
                 sleep(delay).await;
             }
-            
+
             match self.client.get(&url).send().await {
                 Ok(response) => {
                     if response.status().is_success() {
                         return Ok(response);
                     } else if response.status().is_server_error() {
-                        last_error = Some(WarpError::ServerError(
-                            format!("Server error: {}", response.status())
-                        ));
+                        last_error = Some(WarpError::ServerError(format!(
+                            "Server error: {}",
+                            response.status()
+                        )));
                     } else {
                         return Err(WarpError::ApiError {
                             code: response.status().to_string(),
-                            message: format!("API request failed with status {}", response.status()),
+                            message: format!(
+                                "API request failed with status {}",
+                                response.status()
+                            ),
                             hint: None,
                         });
                     }
@@ -111,43 +128,49 @@ impl ElisClient {
                 }
             }
         }
-        
-        Err(last_error.unwrap_or_else(|| {
-            WarpError::Other("Request failed after all retries".to_string())
-        }))
+
+        Err(last_error
+            .unwrap_or_else(|| WarpError::Other("Request failed after all retries".to_string())))
     }
-    
+
     /// Parse ELIS search response
-    fn parse_search_response(&self, raw: ElisSearchResponse, requested_page: u32) -> SearchResponse {
+    fn parse_search_response(
+        &self,
+        raw: ElisSearchResponse,
+        requested_page: u32,
+    ) -> SearchResponse {
         let laws = if let Some(search_data) = raw.law_search {
             search_data.laws
         } else {
             raw.laws.unwrap_or_default()
         };
-        
-        let items = laws.into_iter().map(|law| {
-            let mut metadata = HashMap::new();
-            if let Some(ref region) = law.region {
-                metadata.insert("region".to_string(), region.clone());
-            }
-            
-            SearchItem {
-                id: law.law_id,
-                title: law.law_name,
-                law_no: law.law_no,
-                law_type: law.law_type,
-                department: law.department,
-                enforcement_date: law.enforcement_date,
-                revision_date: law.revision_date,
-                summary: law.law_summary,
-                source: "ELIS".to_string(),
-                metadata,
-            }
-        }).collect();
-        
+
+        let items = laws
+            .into_iter()
+            .map(|law| {
+                let mut metadata = HashMap::new();
+                if let Some(ref region) = law.region {
+                    metadata.insert("region".to_string(), region.clone());
+                }
+
+                SearchItem {
+                    id: law.law_id,
+                    title: law.law_name,
+                    law_no: law.law_no,
+                    law_type: law.law_type,
+                    department: law.department,
+                    enforcement_date: law.enforcement_date,
+                    revision_date: law.revision_date,
+                    summary: law.law_summary,
+                    source: "ELIS".to_string(),
+                    metadata,
+                }
+            })
+            .collect();
+
         SearchResponse {
             total_count: raw.total_count.unwrap_or(0),
-            page_no: requested_page,  // Use the requested page number
+            page_no: requested_page, // Use the requested page number
             page_size: raw.page_size.unwrap_or(50),
             items,
             source: "ELIS".to_string(),
@@ -162,7 +185,7 @@ impl LegalApiClient for ElisClient {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
         }
-        
+
         // Generate cache key for this ELIS search request
         let cache_key = CacheKeyGenerator::elis_key(
             "search",
@@ -172,24 +195,24 @@ impl LegalApiClient for ElisClient {
             Some(request.page_no),
             Some(request.page_size),
         );
-        
+
         // Check cache first
         if let Some(cached_response) = self.check_search_cache(&cache_key).await? {
             return Ok(cached_response);
         }
-        
+
         // Calculate the starting position (offset) for the API
         let offset = ((request.page_no - 1) * request.page_size) + 1;
-        
+
         let mut params = vec![
             ("OC", self.config.api_key.clone()),
             ("target", "law".to_string()),
             ("type", "JSON".to_string()),
             ("query", request.query.clone()),
-            ("page", offset.to_string()),  // Use offset instead of page number
+            ("page", offset.to_string()), // Use offset instead of page number
             ("display", request.page_size.to_string()),
         ];
-        
+
         // Add optional parameters
         if let Some(region) = &request.region {
             params.push(("region", region.clone()));
@@ -197,17 +220,15 @@ impl LegalApiClient for ElisClient {
         if let Some(law_type) = &request.law_type {
             params.push(("lsKndCd", law_type.clone()));
         }
-        
+
         let url = reqwest::Url::parse_with_params(SEARCH_URL, &params)
             .map_err(|e| WarpError::Parse(e.to_string()))?;
-        
-        
+
         let response = self.execute_with_retry(url.to_string()).await?;
-        
+
         // Get response text for better error reporting
-        let response_text = response.text().await
-            .map_err(|e| WarpError::Network(e))?;
-        
+        let response_text = response.text().await.map_err(WarpError::Network)?;
+
         // Check if response is HTML (common when API key is invalid)
         if response_text.starts_with("<") {
             return Err(WarpError::ApiError {
@@ -216,31 +237,29 @@ impl LegalApiClient for ElisClient {
                 hint: Some("Please check your API key with 'warp config get law.elis.key' and ensure it's valid.".to_string()),
             });
         }
-        
+
         // Try to parse JSON
         let raw: ElisSearchResponse = serde_json::from_str(&response_text)
-            .map_err(|e| {
-                WarpError::Parse(format!("Failed to parse ELIS response: {}", e))
-            })?;
-        
+            .map_err(|e| WarpError::Parse(format!("Failed to parse ELIS response: {}", e)))?;
+
         let response = self.parse_search_response(raw, request.page_no);
-        
+
         // Store in cache
         if let Err(e) = self.store_search_in_cache(&cache_key, &response).await {
             warn!("Failed to cache ELIS search response: {}", e);
         }
-        
+
         Ok(response)
     }
-    
+
     async fn get_detail(&self, id: &str) -> Result<LawDetail> {
         if self.config.api_key.is_empty() {
             return Err(WarpError::NoApiKey);
         }
-        
+
         // Generate cache key for detail request
         let cache_key = format!("{}:detail:{}", self.api_type().as_str(), id);
-        
+
         // Check cache for detail response
         if let Some(ref cache) = self.config.cache {
             if !self.config.bypass_cache {
@@ -253,7 +272,10 @@ impl LegalApiClient for ElisClient {
                             return Ok(detail);
                         }
                         Err(e) => {
-                            warn!("Failed to deserialize cached ELIS detail: {}, removing from cache", e);
+                            warn!(
+                                "Failed to deserialize cached ELIS detail: {}, removing from cache",
+                                e
+                            );
                             let _ = cache.remove(&cache_key).await;
                         }
                     }
@@ -262,7 +284,7 @@ impl LegalApiClient for ElisClient {
                 }
             }
         }
-        
+
         // ELIS detail API implementation
         // Note: The actual API endpoint and parameters may differ
         let params = vec![
@@ -271,14 +293,13 @@ impl LegalApiClient for ElisClient {
             ("type", "JSON".to_string()),
             ("MST", id.to_string()),
         ];
-        
+
         let url = reqwest::Url::parse_with_params(BASE_URL, &params)
             .map_err(|e| WarpError::Parse(e.to_string()))?;
-        
+
         let response = self.execute_with_retry(url.to_string()).await?;
-        let response_text = response.text().await
-            .map_err(|e| WarpError::Network(e))?;
-        
+        let response_text = response.text().await.map_err(WarpError::Network)?;
+
         // Check if response is HTML
         if response_text.starts_with("<") {
             return Err(WarpError::ApiError {
@@ -287,19 +308,22 @@ impl LegalApiClient for ElisClient {
                 hint: Some("Please check your API key configuration.".to_string()),
             });
         }
-        
+
         let raw: ElisDetailResponse = serde_json::from_str(&response_text)
             .map_err(|e| WarpError::Parse(format!("Failed to parse detail response: {}", e)))?;
-        
+
         let detail = raw.into_law_detail();
-        
+
         // Store detail in cache
         if let Some(ref cache) = self.config.cache {
             if !self.config.bypass_cache {
                 debug!("Storing ELIS detail in cache for key: {}", cache_key);
                 match serde_json::to_vec(&detail) {
                     Ok(serialized) => {
-                        if let Err(e) = cache.put(&cache_key, serialized, self.api_type(), None).await {
+                        if let Err(e) = cache
+                            .put(&cache_key, serialized, self.api_type(), None)
+                            .await
+                        {
                             warn!("Failed to store ELIS detail in cache: {}", e);
                         } else {
                             info!("Successfully cached ELIS law detail");
@@ -311,10 +335,10 @@ impl LegalApiClient for ElisClient {
                 }
             }
         }
-        
+
         Ok(detail)
     }
-    
+
     async fn get_history(&self, id: &str) -> Result<LawHistory> {
         // ELIS doesn't have a separate history API
         // Return a simple history with current version only
@@ -325,15 +349,15 @@ impl LegalApiClient for ElisClient {
             entries: vec![],
         })
     }
-    
+
     fn api_type(&self) -> ApiType {
         ApiType::Elis
     }
-    
+
     fn base_url(&self) -> &str {
         BASE_URL
     }
-    
+
     fn is_configured(&self) -> bool {
         !self.config.api_key.is_empty()
     }
@@ -348,7 +372,7 @@ struct ElisSearchResponse {
     #[serde(rename = "totalCnt")]
     total_count: Option<u32>,
     #[serde(rename = "page")]
-    page_no: Option<u32>,
+    _page_no: Option<u32>,
     #[serde(rename = "display")]
     page_size: Option<u32>,
     #[serde(rename = "law", default, deserialize_with = "single_or_vec_or_null")]
@@ -437,11 +461,17 @@ impl ElisDetailResponse {
             department: None,
             enforcement_date: None,
             revision_date: None,
-            content: self.law.articles.iter()
+            content: self
+                .law
+                .articles
+                .iter()
                 .map(|a| format!("{}: {}", a.number, a.content))
                 .collect::<Vec<_>>()
                 .join("\n\n"),
-            articles: self.law.articles.into_iter()
+            articles: self
+                .law
+                .articles
+                .into_iter()
                 .map(|a| crate::api::types::Article {
                     number: a.number,
                     title: a.title,

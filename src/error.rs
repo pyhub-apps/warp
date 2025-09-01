@@ -61,7 +61,11 @@ pub enum WarpError {
 impl WarpError {
     /// Create an API error with an optional hint
     #[allow(dead_code)]
-    pub fn api_error(code: impl Into<String>, message: impl Into<String>, hint: Option<String>) -> Self {
+    pub fn api_error(
+        code: impl Into<String>,
+        message: impl Into<String>,
+        hint: Option<String>,
+    ) -> Self {
         Self::ApiError {
             code: code.into(),
             message: message.into(),
@@ -77,7 +81,8 @@ impl WarpError {
                 "💡 해결 방법:\n\
                  1. https://open.law.go.kr 에서 API 키를 발급받으세요\n\
                  2. 다음 명령어로 API 키를 설정하세요:\n\
-                    warp config set law.nlic.key YOUR_API_KEY".to_string()
+                    warp config set law.nlic.key YOUR_API_KEY"
+                    .to_string(),
             ),
             Self::ApiError { hint, .. } => hint.clone(),
             Self::Network(e) => {
@@ -92,47 +97,54 @@ impl WarpError {
                     hint.push_str("• 문제가 지속되면 잠시 후 다시 시도해주세요\n");
                 }
                 Some(hint)
-            },
+            }
             Self::RateLimit => Some(
                 "💡 해결 방법:\n\
                  • API 요청 한도를 초과했습니다\n\
                  • 잠시 후(약 1분) 다시 시도해주세요\n\
-                 • 빈번한 요청은 피해주세요".to_string()
+                 • 빈번한 요청은 피해주세요"
+                    .to_string(),
             ),
             Self::Cache(_) => Some(
                 "💡 해결 방법:\n\
                  • 캐시 디렉토리의 권한을 확인해주세요\n\
                  • warp cache clear 명령으로 캐시를 초기화해보세요\n\
-                 • 디스크 공간이 충분한지 확인하세요".to_string()
+                 • 디스크 공간이 충분한지 확인하세요"
+                    .to_string(),
             ),
             Self::AuthenticationFailed(_) => Some(
                 "💡 해결 방법:\n\
                  • API 키가 올바른지 확인해주세요\n\
                  • warp config get law.nlic.key 명령으로 현재 설정을 확인하세요\n\
-                 • 키가 만료되었다면 새로 발급받으세요".to_string()
+                 • 키가 만료되었다면 새로 발급받으세요"
+                    .to_string(),
             ),
             Self::Parse(msg) if msg.contains("XML") || msg.contains("JSON") => Some(
                 "💡 해결 방법:\n\
                  • API 응답 형식이 예상과 다릅니다\n\
                  • --verbose 옵션으로 자세한 정보를 확인하세요\n\
-                 • 문제가 지속되면 GitHub에 이슈를 등록해주세요".to_string()
+                 • 문제가 지속되면 GitHub에 이슈를 등록해주세요"
+                    .to_string(),
             ),
             Self::InvalidInput(_) => Some(
                 "💡 해결 방법:\n\
                  • 입력한 값을 다시 확인해주세요\n\
-                 • warp --help 명령으로 사용법을 확인하세요".to_string()
+                 • warp --help 명령으로 사용법을 확인하세요"
+                    .to_string(),
             ),
-            Self::NotFound(item) => Some(
-                format!("💡 해결 방법:\n\
+            Self::NotFound(item) => Some(format!(
+                "💡 해결 방법:\n\
                  • '{}' 항목을 찾을 수 없습니다\n\
                  • 검색어나 ID를 다시 확인해주세요\n\
-                 • 다른 검색어로 시도해보세요", item)
-            ),
+                 • 다른 검색어로 시도해보세요",
+                item
+            )),
             Self::ServerError(_) => Some(
                 "💡 해결 방법:\n\
                  • 서버에 일시적인 문제가 있습니다\n\
                  • 잠시 후 다시 시도해주세요\n\
-                 • 문제가 지속되면 https://www.law.go.kr 서비스 상태를 확인하세요".to_string()
+                 • 문제가 지속되면 https://www.law.go.kr 서비스 상태를 확인하세요"
+                    .to_string(),
             ),
             Self::Io(e) => {
                 let mut hint = String::from("💡 해결 방법:\n");
@@ -147,7 +159,7 @@ impl WarpError {
                     hint.push_str("• 디스크 공간과 권한을 확인하세요\n");
                 }
                 Some(hint)
-            },
+            }
             _ => None,
         }
     }

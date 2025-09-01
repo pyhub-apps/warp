@@ -1,13 +1,13 @@
-pub mod client;
-pub mod nlic;
-pub mod elis;
-pub mod prec;
 pub mod admrul;
-pub mod expc;
-pub mod types;
+pub mod client;
 pub mod deserializers;
+pub mod elis;
+pub mod expc;
+pub mod nlic;
+pub mod prec;
+pub mod types;
 
-pub use client::{LegalApiClient, ApiClientFactory};
+pub use client::{ApiClientFactory, LegalApiClient};
 
 /// API types supported by the CLI
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

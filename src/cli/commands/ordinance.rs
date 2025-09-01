@@ -1,22 +1,26 @@
-use crate::progress::{ProgressManager};
-use std::sync::Arc;
-use crate::api::{ApiType, ApiClientFactory};
 use crate::api::client::{ClientConfig, LegalApiClient};
-use crate::api::types::{UnifiedSearchRequest, ResponseType};
+use crate::api::types::{ResponseType, UnifiedSearchRequest};
+use crate::api::{ApiClientFactory, ApiType};
+use crate::cache::CacheStore;
 use crate::cli::args::{OrdinanceArgs, OrdinanceCommand};
 use crate::cli::OutputFormat;
 use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
-use crate::cache::CacheStore;
+use std::sync::Arc;
 
 /// Execute ordinance command (자치법규)
-pub async fn execute(args: OrdinanceArgs, format: OutputFormat, quiet: bool, verbose: bool, no_cache: bool) -> Result<()> {
+pub async fn execute(
+    args: OrdinanceArgs,
+    format: OutputFormat,
+    _quiet: bool,
+    _verbose: bool,
+    no_cache: bool,
+) -> Result<()> {
     // Load configuration
     let config = Config::load()?;
-    let api_key = config.get_elis_api_key()
-        .ok_or(WarpError::NoApiKey)?;
-    
+    let api_key = config.get_elis_api_key().ok_or(WarpError::NoApiKey)?;
+
     // Create cache store if cache is enabled and not bypassed
     let cache = if config.cache.enabled && !no_cache {
         let cache_config = config.cache.to_cache_config();
@@ -24,7 +28,7 @@ pub async fn execute(args: OrdinanceArgs, format: OutputFormat, quiet: bool, ver
     } else {
         None
     };
-    
+
     // Create API client
     let client_config = ClientConfig {
         api_key,
@@ -32,13 +36,13 @@ pub async fn execute(args: OrdinanceArgs, format: OutputFormat, quiet: bool, ver
         bypass_cache: no_cache,
         ..Default::default()
     };
-    
+
     let client = ApiClientFactory::create(ApiType::Elis, client_config)?;
-    
+
     // Extract common args before match
     let region = args.region.clone();
     let law_type = args.law_type.clone();
-    
+
     // Handle direct query or subcommand
     match args.command {
         Some(OrdinanceCommand::Search { query, page, size }) => {
@@ -50,7 +54,16 @@ pub async fn execute(args: OrdinanceArgs, format: OutputFormat, quiet: bool, ver
         None => {
             // Direct query without subcommand
             if let Some(query) = args.query {
-                search_ordinances(client.as_ref(), query, args.page, args.size, region, law_type, format).await
+                search_ordinances(
+                    client.as_ref(),
+                    query,
+                    args.page,
+                    args.size,
+                    region,
+                    law_type,
+                    format,
+                )
+                .await
             } else {
                 Err(WarpError::InvalidInput("No search query provided. Use 'warp ordinance <query>' or 'warp ordinance search <query>'".to_string()))
             }
@@ -68,9 +81,11 @@ async fn search_ordinances(
     format: OutputFormat,
 ) -> Result<()> {
     if query.trim().is_empty() {
-        return Err(WarpError::InvalidInput("Search query cannot be empty".to_string()));
+        return Err(WarpError::InvalidInput(
+            "Search query cannot be empty".to_string(),
+        ));
     }
-    
+
     let request = UnifiedSearchRequest {
         query,
         page_no: page,
@@ -80,17 +95,17 @@ async fn search_ordinances(
         law_type,
         ..Default::default()
     };
-    
+
     let response = client.search(request).await?;
-    
+
     if response.items.is_empty() {
         println!("No results found for your search query.");
         return Ok(());
     }
-    
+
     let output = output::format_search_response(&response, format)?;
     println!("{}", output);
-    
+
     Ok(())
 }
 

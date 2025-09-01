@@ -1,13 +1,13 @@
-use sha2::{Sha256, Digest};
-use std::collections::HashMap;
 use crate::api::ApiType;
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 
 /// Cache key generator for different API types
 pub struct CacheKeyGenerator;
 
 impl CacheKeyGenerator {
     /// Generate a cache key for API requests
-    /// 
+    ///
     /// The key is generated using SHA256 hash of:
     /// - API type
     /// - Request URL or endpoint
@@ -20,32 +20,32 @@ impl CacheKeyGenerator {
         version: Option<&str>,
     ) -> String {
         let mut hasher = Sha256::new();
-        
+
         // Include API type
         hasher.update(api_type.as_str().as_bytes());
         hasher.update(b"|");
-        
+
         // Include endpoint
         hasher.update(endpoint.as_bytes());
         hasher.update(b"|");
-        
+
         // Include version if provided
         if let Some(v) = version {
             hasher.update(v.as_bytes());
         }
         hasher.update(b"|");
-        
+
         // Include parameters sorted by key for consistency
         let mut sorted_params: Vec<(&String, &String)> = params.iter().collect();
         sorted_params.sort_by_key(|(k, _)| *k);
-        
+
         for (key, value) in sorted_params {
             hasher.update(key.as_bytes());
             hasher.update(b"=");
             hasher.update(value.as_bytes());
             hasher.update(b"&");
         }
-        
+
         let result = hasher.finalize();
         format!("{}:{:x}", api_type.as_str(), result)
     }
@@ -56,7 +56,7 @@ impl CacheKeyGenerator {
         hasher.update(api_type.as_str().as_bytes());
         hasher.update(b"|");
         hasher.update(query.as_bytes());
-        
+
         let result = hasher.finalize();
         format!("{}:{:x}", api_type.as_str(), result)
     }
@@ -70,7 +70,7 @@ impl CacheKeyGenerator {
         size: Option<u32>,
     ) -> String {
         let mut params = HashMap::new();
-        
+
         if let Some(q) = query {
             params.insert("query".to_string(), q.to_string());
         }
@@ -83,7 +83,7 @@ impl CacheKeyGenerator {
         if let Some(s) = size {
             params.insert("size".to_string(), s.to_string());
         }
-        
+
         Self::generate_key(ApiType::Nlic, endpoint, &params, None)
     }
 
@@ -97,7 +97,7 @@ impl CacheKeyGenerator {
         size: Option<u32>,
     ) -> String {
         let mut params = HashMap::new();
-        
+
         if let Some(q) = query {
             params.insert("query".to_string(), q.to_string());
         }
@@ -113,7 +113,7 @@ impl CacheKeyGenerator {
         if let Some(s) = size {
             params.insert("size".to_string(), s.to_string());
         }
-        
+
         Self::generate_key(ApiType::Elis, endpoint, &params, None)
     }
 
@@ -129,7 +129,7 @@ impl CacheKeyGenerator {
         size: Option<u32>,
     ) -> String {
         let mut params = HashMap::new();
-        
+
         if let Some(q) = query {
             params.insert("query".to_string(), q.to_string());
         }
@@ -151,7 +151,7 @@ impl CacheKeyGenerator {
         if let Some(s) = size {
             params.insert("size".to_string(), s.to_string());
         }
-        
+
         Self::generate_key(ApiType::Prec, endpoint, &params, None)
     }
 
@@ -165,7 +165,7 @@ impl CacheKeyGenerator {
         size: Option<u32>,
     ) -> String {
         let mut params = HashMap::new();
-        
+
         if let Some(q) = query {
             params.insert("query".to_string(), q.to_string());
         }
@@ -181,7 +181,7 @@ impl CacheKeyGenerator {
         if let Some(s) = size {
             params.insert("size".to_string(), s.to_string());
         }
-        
+
         Self::generate_key(ApiType::Admrul, endpoint, &params, None)
     }
 
@@ -195,7 +195,7 @@ impl CacheKeyGenerator {
         size: Option<u32>,
     ) -> String {
         let mut params = HashMap::new();
-        
+
         if let Some(q) = query {
             params.insert("query".to_string(), q.to_string());
         }
@@ -211,7 +211,7 @@ impl CacheKeyGenerator {
         if let Some(s) = size {
             params.insert("size".to_string(), s.to_string());
         }
-        
+
         Self::generate_key(ApiType::Expc, endpoint, &params, None)
     }
 
@@ -224,20 +224,20 @@ impl CacheKeyGenerator {
     ) -> String {
         let mut params = HashMap::new();
         params.insert("query".to_string(), query.to_string());
-        
+
         // Include API types in sorted order
         let mut sorted_apis: Vec<_> = apis.iter().map(|api| api.as_str()).collect();
         sorted_apis.sort();
         let apis_str = sorted_apis.join(",");
         params.insert("apis".to_string(), apis_str);
-        
+
         if let Some(p) = page {
             params.insert("page".to_string(), p.to_string());
         }
         if let Some(s) = size {
             params.insert("size".to_string(), s.to_string());
         }
-        
+
         Self::generate_key(ApiType::All, "unified_search", &params, None)
     }
 
@@ -249,7 +249,7 @@ impl CacheKeyGenerator {
             if ApiType::from_str(api_part).is_none() {
                 return false;
             }
-            
+
             // Check if hash part looks like a hex string (64 chars for SHA256)
             hash_part.len() == 64 && hash_part.chars().all(|c| c.is_ascii_hexdigit())
         } else {
@@ -276,21 +276,11 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("query".to_string(), "test".to_string());
         params.insert("page".to_string(), "1".to_string());
-        
-        let key1 = CacheKeyGenerator::generate_key(
-            ApiType::Nlic, 
-            "/api/search", 
-            &params, 
-            None
-        );
-        
-        let key2 = CacheKeyGenerator::generate_key(
-            ApiType::Nlic, 
-            "/api/search", 
-            &params, 
-            None
-        );
-        
+
+        let key1 = CacheKeyGenerator::generate_key(ApiType::Nlic, "/api/search", &params, None);
+
+        let key2 = CacheKeyGenerator::generate_key(ApiType::Nlic, "/api/search", &params, None);
+
         assert_eq!(key1, key2, "Keys should be consistent");
     }
 
@@ -298,24 +288,14 @@ mod tests {
     fn test_generate_key_different_params() {
         let mut params1 = HashMap::new();
         params1.insert("query".to_string(), "test1".to_string());
-        
+
         let mut params2 = HashMap::new();
         params2.insert("query".to_string(), "test2".to_string());
-        
-        let key1 = CacheKeyGenerator::generate_key(
-            ApiType::Nlic, 
-            "/api/search", 
-            &params1, 
-            None
-        );
-        
-        let key2 = CacheKeyGenerator::generate_key(
-            ApiType::Nlic, 
-            "/api/search", 
-            &params2, 
-            None
-        );
-        
+
+        let key1 = CacheKeyGenerator::generate_key(ApiType::Nlic, "/api/search", &params1, None);
+
+        let key2 = CacheKeyGenerator::generate_key(ApiType::Nlic, "/api/search", &params2, None);
+
         assert_ne!(key1, key2, "Keys should be different for different params");
     }
 
@@ -324,26 +304,19 @@ mod tests {
         let mut params1 = HashMap::new();
         params1.insert("a".to_string(), "1".to_string());
         params1.insert("b".to_string(), "2".to_string());
-        
+
         let mut params2 = HashMap::new();
         params2.insert("b".to_string(), "2".to_string());
         params2.insert("a".to_string(), "1".to_string());
-        
-        let key1 = CacheKeyGenerator::generate_key(
-            ApiType::Nlic, 
-            "/api/search", 
-            &params1, 
-            None
+
+        let key1 = CacheKeyGenerator::generate_key(ApiType::Nlic, "/api/search", &params1, None);
+
+        let key2 = CacheKeyGenerator::generate_key(ApiType::Nlic, "/api/search", &params2, None);
+
+        assert_eq!(
+            key1, key2,
+            "Keys should be same regardless of parameter order"
         );
-        
-        let key2 = CacheKeyGenerator::generate_key(
-            ApiType::Nlic, 
-            "/api/search", 
-            &params2, 
-            None
-        );
-        
-        assert_eq!(key1, key2, "Keys should be same regardless of parameter order");
     }
 
     #[test]
@@ -351,8 +324,9 @@ mod tests {
         let valid_key = "nlic:a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890";
         let invalid_key1 = "invalid_format";
         let invalid_key2 = "nlic:short_hash";
-        let invalid_key3 = "unknown_api:a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890";
-        
+        let invalid_key3 =
+            "unknown_api:a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890";
+
         assert!(CacheKeyGenerator::is_valid_key(valid_key));
         assert!(!CacheKeyGenerator::is_valid_key(invalid_key1));
         assert!(!CacheKeyGenerator::is_valid_key(invalid_key2));
@@ -364,7 +338,7 @@ mod tests {
         let key = "nlic:a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890";
         let api_type = CacheKeyGenerator::extract_api_type(key);
         assert_eq!(api_type, Some(ApiType::Nlic));
-        
+
         let invalid_key = "invalid_format";
         let api_type = CacheKeyGenerator::extract_api_type(invalid_key);
         assert_eq!(api_type, None);
@@ -379,7 +353,7 @@ mod tests {
             Some(1),
             Some(10),
         );
-        
+
         let key2 = CacheKeyGenerator::nlic_key(
             "/api/search",
             Some("테스트"),
@@ -387,7 +361,7 @@ mod tests {
             Some(1),
             Some(10),
         );
-        
+
         assert_eq!(key1, key2);
         assert!(key1.starts_with("nlic:"));
     }
@@ -396,11 +370,11 @@ mod tests {
     fn test_unified_search_key() {
         let apis = vec![ApiType::Nlic, ApiType::Elis, ApiType::Prec];
         let key1 = CacheKeyGenerator::unified_search_key("test", &apis, Some(1), Some(10));
-        
+
         // Test with different order - should produce same key
         let apis2 = vec![ApiType::Elis, ApiType::Nlic, ApiType::Prec];
         let key2 = CacheKeyGenerator::unified_search_key("test", &apis2, Some(1), Some(10));
-        
+
         assert_eq!(key1, key2);
         assert!(key1.starts_with("all:"));
     }

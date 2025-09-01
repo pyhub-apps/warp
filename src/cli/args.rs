@@ -5,22 +5,22 @@ use clap::{Args, Subcommand};
 pub struct LawArgs {
     #[command(subcommand)]
     pub command: Option<LawCommand>,
-    
+
     /// Search query (can be used directly without subcommand)
     pub query: Option<String>,
-    
+
     /// Page number
     #[arg(short, long, default_value = "1")]
     pub page: u32,
-    
+
     /// Results per page
     #[arg(short = 's', long, default_value = "50")]
     pub size: u32,
-    
+
     /// Law type filter
     #[arg(short = 't', long)]
     pub law_type: Option<String>,
-    
+
     /// Department filter
     #[arg(short = 'd', long)]
     pub department: Option<String>,
@@ -32,22 +32,22 @@ pub enum LawCommand {
     Search {
         /// Search query
         query: String,
-        
+
         /// Page number
         #[arg(short, long, default_value = "1")]
         page: u32,
-        
+
         /// Results per page
         #[arg(short = 's', long, default_value = "50")]
         size: u32,
     },
-    
+
     /// Get law details
     Detail {
         /// Law ID
         id: String,
     },
-    
+
     /// Get law history
     History {
         /// Law ID
@@ -60,22 +60,22 @@ pub enum LawCommand {
 pub struct OrdinanceArgs {
     #[command(subcommand)]
     pub command: Option<OrdinanceCommand>,
-    
+
     /// Search query (can be used directly without subcommand)
     pub query: Option<String>,
-    
+
     /// Page number
     #[arg(short, long, default_value = "1")]
     pub page: u32,
-    
+
     /// Results per page
     #[arg(short = 's', long, default_value = "50")]
     pub size: u32,
-    
+
     /// Region filter
     #[arg(short = 'r', long)]
     pub region: Option<String>,
-    
+
     /// Law type filter
     #[arg(short = 't', long)]
     pub law_type: Option<String>,
@@ -87,16 +87,16 @@ pub enum OrdinanceCommand {
     Search {
         /// Search query
         query: String,
-        
+
         /// Page number
         #[arg(short, long, default_value = "1")]
         page: u32,
-        
+
         /// Results per page
         #[arg(short = 's', long, default_value = "50")]
         size: u32,
     },
-    
+
     /// Get ordinance details
     Detail {
         /// Ordinance ID
@@ -109,30 +109,30 @@ pub enum OrdinanceCommand {
 pub struct PrecedentArgs {
     #[command(subcommand)]
     pub command: Option<PrecedentCommand>,
-    
+
     /// Search query (can be used directly without subcommand)
     pub query: Option<String>,
-    
+
     /// Page number
     #[arg(short, long, default_value = "1")]
     pub page: u32,
-    
+
     /// Results per page
     #[arg(short = 's', long, default_value = "50")]
     pub size: u32,
-    
+
     /// Court filter
     #[arg(short = 'c', long)]
     pub court: Option<String>,
-    
+
     /// Case type filter
     #[arg(short = 't', long)]
     pub case_type: Option<String>,
-    
+
     /// Date from (YYYYMMDD)
     #[arg(long)]
     pub date_from: Option<String>,
-    
+
     /// Date to (YYYYMMDD)
     #[arg(long)]
     pub date_to: Option<String>,
@@ -144,16 +144,16 @@ pub enum PrecedentCommand {
     Search {
         /// Search query
         query: String,
-        
+
         /// Page number
         #[arg(short, long, default_value = "1")]
         page: u32,
-        
+
         /// Results per page
         #[arg(short = 's', long, default_value = "50")]
         size: u32,
     },
-    
+
     /// Get precedent details
     Detail {
         /// Precedent ID
@@ -166,11 +166,11 @@ pub enum PrecedentCommand {
 pub struct AdmruleArgs {
     /// Search query
     pub query: Option<String>,
-    
+
     /// Page number
     #[arg(short, long, default_value = "1")]
     pub page: u32,
-    
+
     /// Results per page
     #[arg(short = 's', long, default_value = "50")]
     pub size: u32,
@@ -181,11 +181,11 @@ pub struct AdmruleArgs {
 pub struct InterpretationArgs {
     /// Search query
     pub query: Option<String>,
-    
+
     /// Page number
     #[arg(short, long, default_value = "1")]
     pub page: u32,
-    
+
     /// Results per page
     #[arg(short = 's', long, default_value = "50")]
     pub size: u32,
@@ -196,15 +196,15 @@ pub struct InterpretationArgs {
 pub struct SearchArgs {
     /// Search query
     pub query: String,
-    
+
     /// Page number
     #[arg(short, long, default_value = "1")]
     pub page: u32,
-    
+
     /// Results per page
     #[arg(short = 's', long, default_value = "50")]
     pub size: u32,
-    
+
     /// Source to search (nlic, elis, all)
     #[arg(short = 'S', long, default_value = "all")]
     pub source: String,
@@ -228,24 +228,24 @@ pub struct CacheArgs {
 pub enum CacheCommand {
     /// Show cache status and statistics
     Status,
-    
+
     /// Clear all cached data
     Clear {
         /// Clear only specific API cache (nlic, elis, prec, admrul, expc)
         #[arg(short, long)]
         api: Option<String>,
-        
+
         /// Force clear without confirmation
         #[arg(short, long)]
         force: bool,
     },
-    
+
     /// Show cache configuration
     Config,
-    
+
     /// Enable cache
     Enable,
-    
+
     /// Disable cache
     Disable,
 }
@@ -256,20 +256,20 @@ pub enum ConfigCommand {
     Set {
         /// Configuration key (e.g., law.key)
         key: String,
-        
+
         /// Configuration value
         value: String,
     },
-    
+
     /// Get a configuration value
     Get {
         /// Configuration key
         key: String,
     },
-    
+
     /// Show configuration file path
     Path,
-    
+
     /// Initialize configuration
     Init,
 }

@@ -1,5 +1,5 @@
-pub mod commands;
 pub mod args;
+pub mod commands;
 pub mod shell_detect;
 
 use clap::{Parser, Subcommand};
@@ -56,37 +56,37 @@ pub enum Commands {
     /// Search and view laws (국가법령)
     #[command(alias = "l")]
     Law(args::LawArgs),
-    
+
     /// Search and view local ordinances (자치법규)
     #[command(alias = "o")]
     Ordinance(args::OrdinanceArgs),
-    
+
     /// Search precedents (판례)
     #[command(alias = "p")]
     Precedent(args::PrecedentArgs),
-    
+
     /// Search administrative rules (행정규칙)
     #[command(alias = "a")]
     Admrule(args::AdmruleArgs),
-    
+
     /// Search legal interpretations (법령해석례)
     #[command(alias = "i")]
     Interpretation(args::InterpretationArgs),
-    
+
     /// Unified search across all sources
     #[command(alias = "s")]
     Search(args::SearchArgs),
-    
+
     /// Manage configuration
     #[command(alias = "c")]
     Config(args::ConfigArgs),
-    
+
     /// Manage cache
     Cache(args::CacheArgs),
-    
+
     /// Show version information
     Version,
-    
+
     /// Generate shell completion scripts
     Completions {
         /// The shell to generate completions for (auto-detect if not specified)
@@ -98,19 +98,19 @@ pub enum Commands {
 impl Cli {
     /// Generate shell completion scripts
     fn generate_completions(shell: Shell) {
-        use clap::{Command, CommandFactory};
+        use clap::CommandFactory;
         use clap_complete::generate;
         use std::io;
-        
+
         let mut cmd = Self::command();
         let name = cmd.get_name().to_string();
         generate(shell, &mut cmd, name, &mut io::stdout());
     }
-    
+
     /// Run the CLI application
     pub async fn run() -> crate::error::Result<()> {
         let cli = Self::parse();
-        
+
         // Set up logging
         if cli.verbose {
             env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug"))
@@ -119,14 +119,37 @@ impl Cli {
             env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
                 .init();
         }
-        
+
         let result = match cli.command {
-            Commands::Law(args) => commands::law::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
-            Commands::Ordinance(args) => commands::ordinance::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
-            Commands::Precedent(args) => commands::precedent::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
-            Commands::Admrule(args) => commands::admrule::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
-            Commands::Interpretation(args) => commands::interpretation::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
-            Commands::Search(args) => commands::search::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await,
+            Commands::Law(args) => {
+                commands::law::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache).await
+            }
+            Commands::Ordinance(args) => {
+                commands::ordinance::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache)
+                    .await
+            }
+            Commands::Precedent(args) => {
+                commands::precedent::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache)
+                    .await
+            }
+            Commands::Admrule(args) => {
+                commands::admrule::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache)
+                    .await
+            }
+            Commands::Interpretation(args) => {
+                commands::interpretation::execute(
+                    args,
+                    cli.format,
+                    cli.quiet,
+                    cli.verbose,
+                    cli.no_cache,
+                )
+                .await
+            }
+            Commands::Search(args) => {
+                commands::search::execute(args, cli.format, cli.quiet, cli.verbose, cli.no_cache)
+                    .await
+            }
             Commands::Config(args) => commands::config::execute(args).await,
             Commands::Cache(args) => commands::cache::execute(args).await,
             Commands::Version => {
@@ -134,8 +157,10 @@ impl Cli {
                 Ok(())
             }
             Commands::Completions { shell } => {
-                use shell_detect::{detect_current_shell, confirm_shell_selection, get_completion_shell};
-                
+                use shell_detect::{
+                    confirm_shell_selection, detect_current_shell, get_completion_shell,
+                };
+
                 let target_shell = if let Some(shell) = shell {
                     // User specified a shell explicitly
                     shell
@@ -180,26 +205,26 @@ impl Cli {
                         }
                     }
                 };
-                
+
                 Self::generate_completions(target_shell);
                 Ok(())
             }
         };
-        
+
         // Handle errors with better messaging
         match result {
             Ok(()) => Ok(()),
             Err(e) => {
                 use crate::error::WarpError;
-                
+
                 // Print main error message
                 eprintln!("\n{}", e);
-                
+
                 // Print hint if available
                 if let Some(hint) = e.hint() {
                     eprintln!("\n{}", hint);
                 }
-                
+
                 // Add verbose suggestion for certain errors
                 match &e {
                     WarpError::Parse(_) | WarpError::ApiError { .. } => {
@@ -209,7 +234,7 @@ impl Cli {
                     }
                     _ => {}
                 }
-                
+
                 Err(e)
             }
         }

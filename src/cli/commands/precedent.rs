@@ -1,23 +1,27 @@
-use crate::progress::{ProgressManager};
-use std::sync::Arc;
-use crate::api::{ApiType, ApiClientFactory};
 use crate::api::client::{ClientConfig, LegalApiClient};
-use crate::api::types::{UnifiedSearchRequest, ResponseType};
+use crate::api::types::{ResponseType, UnifiedSearchRequest};
+use crate::api::{ApiClientFactory, ApiType};
+use crate::cache::CacheStore;
 use crate::cli::args::{PrecedentArgs, PrecedentCommand};
 use crate::cli::OutputFormat;
 use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
-use crate::cache::CacheStore;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Execute precedent command (판례)
-pub async fn execute(args: PrecedentArgs, format: OutputFormat, quiet: bool, verbose: bool, no_cache: bool) -> Result<()> {
+pub async fn execute(
+    args: PrecedentArgs,
+    format: OutputFormat,
+    _quiet: bool,
+    _verbose: bool,
+    no_cache: bool,
+) -> Result<()> {
     // Load configuration
     let config = Config::load()?;
-    let api_key = config.get_prec_api_key()
-        .ok_or(WarpError::NoApiKey)?;
-    
+    let api_key = config.get_prec_api_key().ok_or(WarpError::NoApiKey)?;
+
     // Create cache store if cache is enabled and not bypassed
     let cache = if config.cache.enabled && !no_cache {
         let cache_config = config.cache.to_cache_config();
@@ -25,7 +29,7 @@ pub async fn execute(args: PrecedentArgs, format: OutputFormat, quiet: bool, ver
     } else {
         None
     };
-    
+
     // Create API client
     let client_config = ClientConfig {
         api_key,
@@ -33,29 +37,30 @@ pub async fn execute(args: PrecedentArgs, format: OutputFormat, quiet: bool, ver
         bypass_cache: no_cache,
         ..Default::default()
     };
-    
+
     let client = ApiClientFactory::create(ApiType::Prec, client_config)?;
-    
+
     // Extract common args
     let court = args.court.clone();
     let case_type = args.case_type.clone();
     let date_from = args.date_from.clone();
     let date_to = args.date_to.clone();
-    
+
     // Handle direct query or subcommand
     match args.command {
         Some(PrecedentCommand::Search { query, page, size }) => {
             search_precedents(
-                client.as_ref(), 
-                query, 
-                page, 
-                size, 
-                court, 
+                client.as_ref(),
+                query,
+                page,
+                size,
+                court,
                 case_type,
                 date_from,
                 date_to,
-                format
-            ).await
+                format,
+            )
+            .await
         }
         Some(PrecedentCommand::Detail { id }) => {
             get_precedent_detail(client.as_ref(), id, format).await
@@ -64,16 +69,17 @@ pub async fn execute(args: PrecedentArgs, format: OutputFormat, quiet: bool, ver
             // Direct query without subcommand
             if let Some(query) = args.query {
                 search_precedents(
-                    client.as_ref(), 
-                    query, 
-                    args.page, 
-                    args.size, 
-                    court, 
+                    client.as_ref(),
+                    query,
+                    args.page,
+                    args.size,
+                    court,
                     case_type,
                     date_from,
                     date_to,
-                    format
-                ).await
+                    format,
+                )
+                .await
             } else {
                 Err(WarpError::InvalidInput(
                     "No search query provided. Use 'warp precedent <query>' or 'warp precedent search <query>'".to_string()
@@ -95,9 +101,11 @@ async fn search_precedents(
     format: OutputFormat,
 ) -> Result<()> {
     if query.trim().is_empty() {
-        return Err(WarpError::InvalidInput("Search query cannot be empty".to_string()));
+        return Err(WarpError::InvalidInput(
+            "Search query cannot be empty".to_string(),
+        ));
     }
-    
+
     let mut extras = HashMap::new();
     if let Some(court) = court {
         extras.insert("court".to_string(), court);
@@ -105,7 +113,7 @@ async fn search_precedents(
     if let Some(case_type) = case_type {
         extras.insert("case_type".to_string(), case_type);
     }
-    
+
     let request = UnifiedSearchRequest {
         query,
         page_no: page,
@@ -116,17 +124,17 @@ async fn search_precedents(
         extras,
         ..Default::default()
     };
-    
+
     let response = client.search(request).await?;
-    
+
     if response.items.is_empty() {
         println!("No precedents found for your search query.");
         return Ok(());
     }
-    
+
     let output = output::format_search_response(&response, format)?;
     println!("{}", output);
-    
+
     Ok(())
 }
 
