@@ -110,7 +110,16 @@ fn show_config(config: &Config) -> Result<()> {
     if let Some(ref dir) = cache_config.cache_dir {
         println!("  {} {}", "캐시 디렉토리:".bold(), dir.display());
     } else {
-        println!("  {} 기본 위치 ({})", "캐시 디렉토리:".bold(), "~/.cache/warp".italic());
+        #[cfg(target_os = "macos")]
+        let default_path = "~/Library/Caches/pyhub-warp";
+        #[cfg(target_os = "linux")]
+        let default_path = "~/.cache/pyhub-warp";
+        #[cfg(target_os = "windows")]
+        let default_path = "%LOCALAPPDATA%\\pyhub-warp";
+        #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+        let default_path = "~/.cache/pyhub-warp";
+        
+        println!("  {} 기본 위치 ({})", "캐시 디렉토리:".bold(), default_path.italic());
     }
     
     Ok(())

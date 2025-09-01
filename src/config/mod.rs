@@ -98,7 +98,7 @@ fn default_cache_max_size() -> u64 {
 }
 
 fn default_cache_dir() -> Option<PathBuf> {
-    dirs::cache_dir().map(|dir| dir.join("warp"))
+    dirs::cache_dir().map(|dir| dir.join("pyhub-warp"))
 }
 
 impl CacheConfig {
@@ -106,7 +106,7 @@ impl CacheConfig {
     pub fn get_cache_db_path(&self) -> Result<PathBuf> {
         let cache_dir = self.cache_dir
             .clone()
-            .or_else(|| dirs::cache_dir().map(|dir| dir.join("warp")))
+            .or_else(|| dirs::cache_dir().map(|dir| dir.join("pyhub-warp")))
             .ok_or_else(|| WarpError::Config("Could not determine cache directory".to_string()))?;
         
         // Ensure cache directory exists with secure permissions
