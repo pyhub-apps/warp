@@ -8,6 +8,7 @@ use tokio::time::sleep;
 
 use crate::error::{Result, WarpError};
 use super::{ApiType, LegalApiClient};
+use super::deserializers::{single_or_vec, single_or_vec_or_null};
 use super::client::ClientConfig;
 use super::types::{UnifiedSearchRequest, SearchResponse, SearchItem, LawDetail, LawHistory};
 
@@ -270,7 +271,7 @@ struct ExpcSearchResponse {
     page_no: Option<u32>,
     #[serde(rename = "display")]
     page_size: Option<u32>,
-    #[serde(rename = "expc", default)]
+    #[serde(rename = "expc", default, deserialize_with = "single_or_vec_or_null")]
     interpretations: Option<Vec<ExpcInterpretation>>,
 }
 
@@ -282,7 +283,7 @@ struct ExpcSearchData {
     page_no: Option<String>,
     #[serde(rename = "display")]
     page_size: Option<String>,
-    #[serde(rename = "expc", default)]
+    #[serde(rename = "expc", default, deserialize_with = "single_or_vec")]
     interpretations: Vec<ExpcInterpretation>,
 }
 

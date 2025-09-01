@@ -8,6 +8,7 @@ use tokio::time::sleep;
 
 use crate::error::{Result, WarpError};
 use super::{ApiType, LegalApiClient};
+use super::deserializers::single_or_vec;
 use super::client::ClientConfig;
 use super::types::*;
 
@@ -326,7 +327,7 @@ struct NlicSearchResponse {
     page_no: Option<u32>,
     #[serde(rename = "display")]
     page_size: Option<u32>,
-    #[serde(rename = "law", default)]
+    #[serde(rename = "law", default, deserialize_with = "super::deserializers::single_or_vec_or_null")]
     laws: Option<Vec<NlicLaw>>,
 }
 
@@ -338,7 +339,7 @@ struct NlicSearchData {
     page_no: Option<String>,  // API returns string
     #[serde(rename = "display")]
     page_size: Option<String>,  // API returns string
-    #[serde(rename = "law", default)]
+    #[serde(rename = "law", default, deserialize_with = "single_or_vec")]
     laws: Vec<NlicLaw>,
 }
 

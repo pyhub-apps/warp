@@ -5,6 +5,7 @@ pub mod prec;
 pub mod admrul;
 pub mod expc;
 pub mod types;
+pub mod deserializers;
 
 pub use client::{LegalApiClient, ApiClientFactory};
 
