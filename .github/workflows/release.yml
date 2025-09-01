@@ -71,55 +71,66 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: Release ${{ steps.get_version.outputs.version }}
-          body: |
-            ${{ steps.changelog.outputs.changelog }}
-            
-            ## Installation
-            
-            ### Quick Install (Unix-like systems)
-            ```bash
-            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/install.sh | sh
-            ```
-            
-            ### Manual Installation
-            Download the appropriate binary for your platform from the assets below.
-            
-            #### macOS (Apple Silicon)
-            ```bash
-            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-aarch64-apple-darwin.tar.gz
-            tar -xzf warp-aarch64-apple-darwin.tar.gz
-            sudo mv warp /usr/local/bin/
-            ```
-            
-            #### macOS (Intel)
-            ```bash
-            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-apple-darwin.tar.gz
-            tar -xzf warp-x86_64-apple-darwin.tar.gz
-            sudo mv warp /usr/local/bin/
-            ```
-            
-            #### Linux (x86_64)
-            ```bash
-            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-unknown-linux-gnu.tar.gz
-            tar -xzf warp-x86_64-unknown-linux-gnu.tar.gz
-            sudo mv warp /usr/local/bin/
-            ```
-            
-            #### Windows (x86_64)
-            Download `warp-x86_64-pc-windows-msvc.zip` and extract to a directory in your PATH.
-            
-            ### Verify Installation
-            ```bash
-            warp --version
-            ```
-          draft: false
-          prerelease: ${{ contains(steps.get_version.outputs.version, '-') }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create release body file
+          cat > release_body.md << 'EOF'
+          ${{ steps.changelog.outputs.changelog }}
+          
+          ## Installation
+          
+          ### Quick Install (Unix-like systems)
+          ```bash
+          curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/install.sh | sh
+          ```
+          
+          ### Manual Installation
+          Download the appropriate binary for your platform from the assets below.
+          
+          #### macOS (Apple Silicon)
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-aarch64-apple-darwin.tar.gz
+          tar -xzf warp-aarch64-apple-darwin.tar.gz
+          sudo mv warp /usr/local/bin/
+          ```
+          
+          #### macOS (Intel)
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-apple-darwin.tar.gz
+          tar -xzf warp-x86_64-apple-darwin.tar.gz
+          sudo mv warp /usr/local/bin/
+          ```
+          
+          #### Linux (x86_64)
+          ```bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-unknown-linux-gnu.tar.gz
+          tar -xzf warp-x86_64-unknown-linux-gnu.tar.gz
+          sudo mv warp /usr/local/bin/
+          ```
+          
+          #### Windows (x86_64)
+          Download `warp-x86_64-pc-windows-msvc.zip` and extract to a directory in your PATH.
+          
+          ### Verify Installation
+          ```bash
+          warp --version
+          ```
+          EOF
+          
+          # Create release
+          PRERELEASE=""
+          if [[ "${{ steps.get_version.outputs.version }}" == *"-"* ]]; then
+            PRERELEASE="--prerelease"
+          fi
+          
+          gh release create "${{ steps.get_version.outputs.version }}" \
+            --title "Release ${{ steps.get_version.outputs.version }}" \
+            --notes-file release_body.md \
+            $PRERELEASE
+          
+          # Get upload URL for compatibility
+          echo "upload_url=$(gh api repos/${{ github.repository }}/releases/tags/${{ steps.get_version.outputs.version }} --jq '.upload_url')" >> $GITHUB_OUTPUT
 
   build-release:
     name: Build Release
@@ -236,14 +247,12 @@ jobs:
         shell: bash
 
       - name: Upload release asset
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./warp-${{ matrix.target }}.${{ matrix.archive }}
-          asset_name: warp-${{ matrix.target }}.${{ matrix.archive }}
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.create-release.outputs.version }} \
+            ./warp-${{ matrix.target }}.${{ matrix.archive }} \
+            --clobber
 
   checksums:
     name: Generate Checksums
@@ -274,14 +283,12 @@ jobs:
           cat checksums.txt
 
       - name: Upload checksums
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./checksums.txt
-          asset_name: checksums.txt
-          asset_content_type: text/plain
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.create-release.outputs.version }} \
+            ./checksums.txt \
+            --clobber
 
   create-install-script:
     name: Create Install Script
@@ -344,11 +351,9 @@ jobs:
           chmod +x install.sh
 
       - name: Upload install script
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./install.sh
-          asset_name: install.sh
-          asset_content_type: text/plain
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.create-release.outputs.version }} \
+            ./install.sh \
+            --clobber
