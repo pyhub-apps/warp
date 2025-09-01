@@ -179,36 +179,25 @@ impl Cli {
             Ok(()) => Ok(()),
             Err(e) => {
                 use crate::error::WarpError;
-                match &e {
-                    WarpError::NoApiKey => {
-                        eprintln!("Error: No API key configured.");
-                        eprintln!("\nTo use this service, you need an API key from https://open.law.go.kr");
-                        eprintln!("Once you have a key, configure it with:");
-                        eprintln!("  warp config set law.nlic.key YOUR_API_KEY");
-                    }
-                    WarpError::ApiError { code, message, hint } => {
-                        eprintln!("Error: {}", message);
-                        if cli.verbose {
-                            eprintln!("Code: {}", code);
-                        }
-                        if let Some(hint) = hint {
-                            eprintln!("\nHint: {}", hint);
-                        }
-                    }
-                    WarpError::Network(err) => {
-                        eprintln!("Network error: {}", err);
-                        eprintln!("\nPlease check your internet connection and try again.");
-                    }
-                    WarpError::Parse(msg) => {
-                        eprintln!("Error parsing response: {}", msg);
-                        if !cli.verbose {
-                            eprintln!("\nRun with --verbose for more details.");
-                        }
-                    }
-                    _ => {
-                        eprintln!("Error: {}", e);
-                    }
+                
+                // Print main error message
+                eprintln!("\n{}", e);
+                
+                // Print hint if available
+                if let Some(hint) = e.hint() {
+                    eprintln!("\n{}", hint);
                 }
+                
+                // Add verbose suggestion for certain errors
+                match &e {
+                    WarpError::Parse(_) | WarpError::ApiError { .. } => {
+                        if !cli.verbose {
+                            eprintln!("\n💡 더 자세한 정보를 보려면 --verbose 옵션을 사용하세요");
+                        }
+                    }
+                    _ => {}
+                }
+                
                 Err(e)
             }
         }
