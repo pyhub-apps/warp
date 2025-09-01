@@ -3,8 +3,11 @@ pub mod client;
 pub mod deserializers;
 pub mod elis;
 pub mod expc;
+pub mod http_client;
 pub mod nlic;
+pub mod parallel;
 pub mod prec;
+pub mod streaming;
 pub mod types;
 
 use std::str::FromStr;
@@ -45,7 +48,6 @@ impl FromStr for ApiType {
 }
 
 impl ApiType {
-
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Nlic => "nlic",

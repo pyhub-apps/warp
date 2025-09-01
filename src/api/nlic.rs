@@ -9,10 +9,12 @@ use tokio::time::sleep;
 
 use super::client::ClientConfig;
 use super::deserializers::single_or_vec;
+use super::http_client::create_custom_client;
 use super::types::*;
 use super::{ApiType, LegalApiClient};
 use crate::cache::key::CacheKeyGenerator;
 use crate::error::{Result, WarpError};
+use crate::metrics::{get_global_metrics, OperationTimer};
 
 const BASE_URL: &str = "https://www.law.go.kr/DRF/lawService.do";
 const SEARCH_URL: &str = "https://www.law.go.kr/DRF/lawSearch.do";
@@ -24,13 +26,10 @@ pub struct NlicClient {
 }
 
 impl NlicClient {
-    /// Create a new NLIC client
+    /// Create a new NLIC client with optimized HTTP client
     pub fn new(config: ClientConfig) -> Self {
-        let http_client = Client::builder()
-            .timeout(Duration::from_secs(config.timeout))
-            .user_agent(&config.user_agent)
-            .build()
-            .unwrap_or_default();
+        // Use optimized HTTP client with connection pooling
+        let http_client = create_custom_client(config.timeout, &config.user_agent);
 
         Self {
             config,
@@ -210,7 +209,12 @@ impl NlicClient {
 #[async_trait]
 impl LegalApiClient for NlicClient {
     async fn search(&self, request: UnifiedSearchRequest) -> Result<SearchResponse> {
+        // Start performance monitoring
+        let timer = OperationTimer::start("nlic_search".to_string(), get_global_metrics());
+        let metrics = get_global_metrics();
+
         if self.config.api_key.is_empty() {
+            timer.finish_failure();
             return Err(WarpError::NoApiKey);
         }
 
@@ -225,8 +229,12 @@ impl LegalApiClient for NlicClient {
 
         // Check cache first
         if let Some(cached_response) = self.check_cache(&cache_key).await? {
+            metrics.record_cache_hit("nlic");
+            timer.finish_success();
             return Ok(cached_response);
         }
+
+        metrics.record_cache_miss("nlic");
 
         // Calculate the starting position (offset) for the API
         // The API seems to expect an offset rather than a page number
@@ -274,6 +282,7 @@ impl LegalApiClient for NlicClient {
 
         // Check if response is HTML (common when API key is invalid)
         if is_html || response_text.starts_with("<") {
+            timer.finish_failure();
             return Err(WarpError::ApiError {
                 code: "INVALID_RESPONSE".to_string(),
                 message: "API returned HTML instead of JSON. This usually means the API key is invalid or the service is unavailable.".to_string(),
@@ -283,6 +292,7 @@ impl LegalApiClient for NlicClient {
 
         // Check if response is empty
         if response_text.trim().is_empty() {
+            timer.finish_failure();
             return Err(WarpError::ApiError {
                 code: "EMPTY_RESPONSE".to_string(),
                 message: "API returned an empty response.".to_string(),
@@ -294,25 +304,29 @@ impl LegalApiClient for NlicClient {
         }
 
         // Try to parse JSON
-        let raw: NlicSearchResponse = serde_json::from_str(&response_text).map_err(|e| {
-            // Try to provide more context about the error
-            if response_text.contains("error") || response_text.contains("Error") {
-                WarpError::ApiError {
-                    code: "API_ERROR".to_string(),
-                    message: format!(
-                        "API returned an error: {}",
-                        response_text.chars().take(200).collect::<String>()
-                    ),
-                    hint: Some("Check your API key and request parameters.".to_string()),
+        let raw: NlicSearchResponse = match serde_json::from_str(&response_text) {
+            Ok(parsed) => parsed,
+            Err(e) => {
+                timer.finish_failure();
+                // Try to provide more context about the error
+                if response_text.contains("error") || response_text.contains("Error") {
+                    return Err(WarpError::ApiError {
+                        code: "API_ERROR".to_string(),
+                        message: format!(
+                            "API returned an error: {}",
+                            response_text.chars().take(200).collect::<String>()
+                        ),
+                        hint: Some("Check your API key and request parameters.".to_string()),
+                    });
+                } else {
+                    return Err(WarpError::Parse(format!(
+                        "Failed to parse API response as JSON: {}. Response starts with: {}",
+                        e,
+                        response_text.chars().take(100).collect::<String>()
+                    )));
                 }
-            } else {
-                WarpError::Parse(format!(
-                    "Failed to parse API response as JSON: {}. Response starts with: {}",
-                    e,
-                    response_text.chars().take(100).collect::<String>()
-                ))
             }
-        })?;
+        };
 
         let response = self.parse_search_response(raw, request.page_no);
 
@@ -321,6 +335,7 @@ impl LegalApiClient for NlicClient {
             warn!("Failed to cache response: {}", e);
         }
 
+        timer.finish_success();
         Ok(response)
     }
 

@@ -199,8 +199,7 @@ impl Formatter {
 
     // JSON formatting methods
     fn format_search_json(&self, response: &SearchResponse) -> Result<String> {
-        serde_json::to_string_pretty(response)
-            .map_err(crate::error::WarpError::Serialization)
+        serde_json::to_string_pretty(response).map_err(crate::error::WarpError::Serialization)
     }
 
     fn format_detail_json(&self, detail: &LawDetail) -> Result<String> {
