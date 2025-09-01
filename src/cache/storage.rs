@@ -44,7 +44,7 @@ impl SqliteStorage {
         })
         .await
         .map_err(|e| WarpError::Other(format!("Failed to spawn database initialization: {}", e)))?;
-        
+
         result?;
 
         Ok(storage)
