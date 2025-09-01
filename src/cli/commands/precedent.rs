@@ -12,7 +12,7 @@ use std::collections::HashMap;
 pub async fn execute(args: PrecedentArgs, format: OutputFormat) -> Result<()> {
     // Load configuration
     let config = Config::load()?;
-    let api_key = config.get_nlic_api_key()  // Use same key as NLIC for now
+    let api_key = config.get_prec_api_key()
         .ok_or(WarpError::NoApiKey)?;
     
     // Create API client

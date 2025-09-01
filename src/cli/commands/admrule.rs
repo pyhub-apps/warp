@@ -11,13 +11,12 @@ use crate::output::formatter::Formatter;
 pub async fn execute(args: AdmruleArgs, format: OutputFormat) -> Result<()> {
     let config = Config::load()?;
     
-    // Check for API key (use NLIC key since ADMRUL uses the same API)
-    let api_key = config.law.nlic.key.as_ref()
-        .or(config.law.key.as_ref())
+    // Check for API key
+    let api_key = config.get_admrul_api_key()
         .ok_or(crate::error::WarpError::NoApiKey)?;
     
     let client_config = ClientConfig {
-        api_key: api_key.clone(),
+        api_key,
         ..Default::default()
     };
     

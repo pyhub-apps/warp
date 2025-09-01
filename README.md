@@ -53,11 +53,19 @@ cargo build --release
 # 설정 초기화
 warp config init
 
-# API 키 설정
+# 공통 API 키 설정 (모든 API에 기본값으로 사용)
 warp config set law.key YOUR_API_KEY
-warp config set law.nlic.key YOUR_API_KEY  # NLIC 전용
-warp config set law.elis.key YOUR_API_KEY  # ELIS 전용
+
+# API별 개별 키 설정 (선택사항)
+warp config set law.nlic.key YOUR_NLIC_KEY   # 국가법령정보센터 전용
+warp config set law.elis.key YOUR_ELIS_KEY   # 자치법규정보시스템 전용 (별도 키 필요)
+warp config set law.prec.key YOUR_PREC_KEY   # 판례 전용
+warp config set law.admrul.key YOUR_ADMRUL_KEY # 행정규칙 전용
+warp config set law.expc.key YOUR_EXPC_KEY   # 법령해석례 전용
 ```
+
+> **참고**: ELIS(자치법규정보시스템)는 별도의 API 키가 필요할 수 있습니다. 
+> API별 키가 설정되지 않은 경우 공통 키(`law.key`)가 자동으로 사용됩니다.
 
 ### 3. 법령 검색
 
