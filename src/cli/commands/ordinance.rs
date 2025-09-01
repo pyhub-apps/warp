@@ -1,3 +1,5 @@
+use crate::progress::{ProgressManager};
+use std::sync::Arc;
 use crate::api::{ApiType, ApiClientFactory};
 use crate::api::client::{ClientConfig, LegalApiClient};
 use crate::api::types::{UnifiedSearchRequest, ResponseType};
@@ -8,7 +10,7 @@ use crate::error::{Result, WarpError};
 use crate::output;
 
 /// Execute ordinance command (자치법규)
-pub async fn execute(args: OrdinanceArgs, format: OutputFormat) -> Result<()> {
+pub async fn execute(args: OrdinanceArgs, format: OutputFormat, quiet: bool, verbose: bool) -> Result<()> {
     // Load configuration
     let config = Config::load()?;
     let api_key = config.get_elis_api_key()

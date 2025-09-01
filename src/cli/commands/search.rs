@@ -6,12 +6,15 @@ use crate::cli::OutputFormat;
 use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
+use crate::progress::{ProgressManager, messages};
 use futures::future::join_all;
 use std::sync::Arc;
 use chrono::Utc;
 
 /// Execute unified search command across multiple APIs
-pub async fn execute(args: SearchArgs, format: OutputFormat) -> Result<()> {
+pub async fn execute(args: SearchArgs, format: OutputFormat, quiet: bool, verbose: bool) -> Result<()> {
+    // Create progress manager
+    let progress_manager = Arc::new(ProgressManager::new(quiet, verbose));
     if args.query.trim().is_empty() {
         return Err(WarpError::InvalidInput("Search query cannot be empty".to_string()));
     }
@@ -33,8 +36,15 @@ pub async fn execute(args: SearchArgs, format: OutputFormat) -> Result<()> {
     
     // Execute searches in parallel
     let mut tasks = Vec::new();
+    let total_apis = api_types.len();
     
-    for api_type in api_types {
+    // Create multi-API progress bar
+    let multi_progress = progress_manager.create_multi_api_progress(
+        total_apis as u64,
+        &format!("{}개 API에서 '{}' 검색 중", total_apis, args.query)
+    );
+    
+    for (idx, api_type) in api_types.into_iter().enumerate() {
         let api_key = match api_type {
             ApiType::Nlic => config.get_nlic_api_key(),
             ApiType::Elis => config.get_elis_api_key(),
@@ -53,7 +63,11 @@ pub async fn execute(args: SearchArgs, format: OutputFormat) -> Result<()> {
             if let Ok(client) = ApiClientFactory::create(api_type, client_config) {
                 let req = request.clone();
                 let client: Arc<Box<dyn LegalApiClient>> = Arc::from(client);
+                let pm = progress_manager.clone();
+                let api_name = api_type.display_name().to_string();
+                
                 tasks.push(tokio::spawn(async move {
+                    pm.show_message(&format!("{} 검색 시작...", api_name));
                     let result = client.search(req).await;
                     (api_type, result)
                 }));
@@ -69,10 +83,21 @@ pub async fn execute(args: SearchArgs, format: OutputFormat) -> Result<()> {
     let results = join_all(tasks).await;
     let mut all_responses = Vec::new();
     let mut errors = Vec::new();
+    let mut completed = 0;
     
     for result in results {
+        completed += 1;
+        if let Some(pb) = multi_progress.as_ref() {
+            pb.set_position(completed as u64);
+            pb.set_message(messages::multi_api_progress(completed, total_apis));
+        }
+        
         match result {
             Ok((api_type, Ok(response))) => {
+                progress_manager.show_message(&messages::search_complete(
+                    api_type.display_name(), 
+                    response.items.len()
+                ));
                 all_responses.push((api_type, response));
             }
             Ok((api_type, Err(e))) => {
@@ -82,6 +107,14 @@ pub async fn execute(args: SearchArgs, format: OutputFormat) -> Result<()> {
                 eprintln!("Task execution error: {}", e);
             }
         }
+    }
+    
+    // Finish progress bar
+    if let Some(pb) = multi_progress.as_ref() {
+        pb.finish_with_message(format!("✅ 검색 완료: {}개 API에서 {}개 결과", 
+            all_responses.len(), 
+            all_responses.iter().map(|(_, r)| r.items.len()).sum::<usize>()
+        ));
     }
     
     // Handle results

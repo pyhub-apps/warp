@@ -1,3 +1,5 @@
+use crate::progress::{ProgressManager};
+use std::sync::Arc;
 use crate::api::{ApiType, ApiClientFactory};
 use crate::api::client::{ClientConfig, LegalApiClient};
 use crate::api::types::{UnifiedSearchRequest, ResponseType};
@@ -9,7 +11,7 @@ use crate::output;
 use std::collections::HashMap;
 
 /// Execute precedent command (판례)
-pub async fn execute(args: PrecedentArgs, format: OutputFormat) -> Result<()> {
+pub async fn execute(args: PrecedentArgs, format: OutputFormat, quiet: bool, verbose: bool) -> Result<()> {
     // Load configuration
     let config = Config::load()?;
     let api_key = config.get_prec_api_key()
