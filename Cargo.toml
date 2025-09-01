@@ -1,6 +1,6 @@
 [package]
 name = "warp"
-version = "0.1.0"
+version = "2.2536.25"
 edition = "2021"
 authors = ["PyHub Community"]
 description = "Korean Legal Information CLI - Search laws, ordinances, and legal documents from the terminal"
