@@ -113,6 +113,53 @@ xattr -d com.apple.quarantine /usr/local/bin/warp
    - 시스템 변수에서 Path 선택 → 편집
    - 새로 만들기 → `C:\Program Files\warp\` 추가
 
+## 🎯 Shell 자동완성 설치
+
+Shell 자동완성을 설치하면 Tab 키로 명령어와 옵션을 자동완성할 수 있습니다.
+
+### 자동 설치 스크립트
+
+```bash
+# 현재 셸 자동 감지 및 설치
+./install-completions.sh
+
+# 특정 셸 설치
+./install-completions.sh --bash
+./install-completions.sh --zsh
+./install-completions.sh --fish
+./install-completions.sh --powershell
+```
+
+### 수동 설치
+
+#### Bash
+```bash
+warp completions bash > ~/.bash_completion.d/warp.bash
+source ~/.bash_completion.d/warp.bash
+```
+
+#### Zsh
+```bash
+warp completions zsh > ~/.zsh/completions/_warp
+exec zsh
+```
+
+#### Fish
+```bash
+warp completions fish > ~/.config/fish/completions/warp.fish
+```
+
+#### PowerShell
+```powershell
+warp completions powershell >> $PROFILE
+```
+
+### 자동완성 기능
+
+- **명령어**: `warp <TAB>` → law, ordinance, precedent 등
+- **옵션**: `warp law --<TAB>` → --page, --size, --format 등
+- **형식**: `warp law --format <TAB>` → table, json, markdown 등
+
 ## 🔧 설치 후 설정
 
 ### 1. 설치 확인

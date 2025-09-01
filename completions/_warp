@@ -1,0 +1,1229 @@
+#compdef warp
+
+autoload -U is-at-least
+
+_warp() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'-V[Print version]' \
+'--version[Print version]' \
+":: :_warp_commands" \
+"*::: :->warp" \
+&& ret=0
+    case $state in
+    (warp)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-command-$line[1]:"
+        case $line[1] in
+            (law)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-t+[Law type filter]:LAW_TYPE:_default' \
+'--law-type=[Law type filter]:LAW_TYPE:_default' \
+'-d+[Department filter]:DEPARTMENT:_default' \
+'--department=[Department filter]:DEPARTMENT:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::query -- Search query (can be used directly without subcommand):_default' \
+":: :_warp__law_commands" \
+"*::: :->law" \
+&& ret=0
+
+    case $state in
+    (law)
+        words=($line[2] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-law-command-$line[2]:"
+        case $line[2] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':query -- Search query:_default' \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':id -- Law ID:_default' \
+&& ret=0
+;;
+(history)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':id -- Law ID:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__law__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-law-help-command-$line[1]:"
+        case $line[1] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(history)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(ordinance)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-r+[Region filter]:REGION:_default' \
+'--region=[Region filter]:REGION:_default' \
+'-t+[Law type filter]:LAW_TYPE:_default' \
+'--law-type=[Law type filter]:LAW_TYPE:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::query -- Search query (can be used directly without subcommand):_default' \
+":: :_warp__ordinance_commands" \
+"*::: :->ordinance" \
+&& ret=0
+
+    case $state in
+    (ordinance)
+        words=($line[2] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-ordinance-command-$line[2]:"
+        case $line[2] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':query -- Search query:_default' \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':id -- Ordinance ID:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__ordinance__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-ordinance-help-command-$line[1]:"
+        case $line[1] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(precedent)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-c+[Court filter]:COURT:_default' \
+'--court=[Court filter]:COURT:_default' \
+'-t+[Case type filter]:CASE_TYPE:_default' \
+'--case-type=[Case type filter]:CASE_TYPE:_default' \
+'--date-from=[Date from (YYYYMMDD)]:DATE_FROM:_default' \
+'--date-to=[Date to (YYYYMMDD)]:DATE_TO:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::query -- Search query (can be used directly without subcommand):_default' \
+":: :_warp__precedent_commands" \
+"*::: :->precedent" \
+&& ret=0
+
+    case $state in
+    (precedent)
+        words=($line[2] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-precedent-command-$line[2]:"
+        case $line[2] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':query -- Search query:_default' \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':id -- Precedent ID:_default' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__precedent__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-precedent-help-command-$line[1]:"
+        case $line[1] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(admrule)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::query -- Search query:_default' \
+&& ret=0
+;;
+(interpretation)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+'::query -- Search query:_default' \
+&& ret=0
+;;
+(search)
+_arguments "${_arguments_options[@]}" : \
+'-p+[Page number]:PAGE:_default' \
+'--page=[Page number]:PAGE:_default' \
+'-s+[Results per page]:SIZE:_default' \
+'--size=[Results per page]:SIZE:_default' \
+'-S+[Source to search (nlic, elis, all)]:SOURCE:_default' \
+'--source=[Source to search (nlic, elis, all)]:SOURCE:_default' \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':query -- Search query:_default' \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+":: :_warp__config_commands" \
+"*::: :->config" \
+&& ret=0
+
+    case $state in
+    (config)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-config-command-$line[1]:"
+        case $line[1] in
+            (set)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':key -- Configuration key (e.g., law.key):_default' \
+':value -- Configuration value:_default' \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':key -- Configuration key:_default' \
+&& ret=0
+;;
+(path)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(init)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__config__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-config-help-command-$line[1]:"
+        case $line[1] in
+            (set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(path)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(init)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+;;
+(version)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" : \
+'-f+[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'--format=[Output format]:FORMAT:((table\:"Table format (default)"
+json\:"JSON format"
+markdown\:"Markdown format"
+csv\:"CSV format"
+html\:"HTML format"
+html-simple\:"Simple HTML format"))' \
+'-v[Enable verbose output]' \
+'--verbose[Enable verbose output]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
+':shell -- The shell to generate completions for:(bash elvish fish powershell zsh)' \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__help_commands" \
+"*::: :->help" \
+&& ret=0
+
+    case $state in
+    (help)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-help-command-$line[1]:"
+        case $line[1] in
+            (law)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__help__law_commands" \
+"*::: :->law" \
+&& ret=0
+
+    case $state in
+    (law)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-help-law-command-$line[1]:"
+        case $line[1] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(history)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(ordinance)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__help__ordinance_commands" \
+"*::: :->ordinance" \
+&& ret=0
+
+    case $state in
+    (ordinance)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-help-ordinance-command-$line[1]:"
+        case $line[1] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(precedent)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__help__precedent_commands" \
+"*::: :->precedent" \
+&& ret=0
+
+    case $state in
+    (precedent)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-help-precedent-command-$line[1]:"
+        case $line[1] in
+            (search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(detail)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(admrule)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(interpretation)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(search)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(config)
+_arguments "${_arguments_options[@]}" : \
+":: :_warp__help__config_commands" \
+"*::: :->config" \
+&& ret=0
+
+    case $state in
+    (config)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:warp-help-config-command-$line[1]:"
+        case $line[1] in
+            (set)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(get)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(path)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(init)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+(version)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(completions)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+(help)
+_arguments "${_arguments_options[@]}" : \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
+        esac
+    ;;
+esac
+}
+
+(( $+functions[_warp_commands] )) ||
+_warp_commands() {
+    local commands; commands=(
+'law:Search and view laws (국가법령)' \
+'ordinance:Search and view local ordinances (자치법규)' \
+'precedent:Search precedents (판례)' \
+'admrule:Search administrative rules (행정규칙)' \
+'interpretation:Search legal interpretations (법령해석례)' \
+'search:Unified search across all sources' \
+'config:Manage configuration' \
+'version:Show version information' \
+'completions:Generate shell completion scripts' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp commands' commands "$@"
+}
+(( $+functions[_warp__admrule_commands] )) ||
+_warp__admrule_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp admrule commands' commands "$@"
+}
+(( $+functions[_warp__completions_commands] )) ||
+_warp__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp completions commands' commands "$@"
+}
+(( $+functions[_warp__config_commands] )) ||
+_warp__config_commands() {
+    local commands; commands=(
+'set:Set a configuration value' \
+'get:Get a configuration value' \
+'path:Show configuration file path' \
+'init:Initialize configuration' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp config commands' commands "$@"
+}
+(( $+functions[_warp__config__get_commands] )) ||
+_warp__config__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config get commands' commands "$@"
+}
+(( $+functions[_warp__config__help_commands] )) ||
+_warp__config__help_commands() {
+    local commands; commands=(
+'set:Set a configuration value' \
+'get:Get a configuration value' \
+'path:Show configuration file path' \
+'init:Initialize configuration' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp config help commands' commands "$@"
+}
+(( $+functions[_warp__config__help__get_commands] )) ||
+_warp__config__help__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config help get commands' commands "$@"
+}
+(( $+functions[_warp__config__help__help_commands] )) ||
+_warp__config__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config help help commands' commands "$@"
+}
+(( $+functions[_warp__config__help__init_commands] )) ||
+_warp__config__help__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config help init commands' commands "$@"
+}
+(( $+functions[_warp__config__help__path_commands] )) ||
+_warp__config__help__path_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config help path commands' commands "$@"
+}
+(( $+functions[_warp__config__help__set_commands] )) ||
+_warp__config__help__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config help set commands' commands "$@"
+}
+(( $+functions[_warp__config__init_commands] )) ||
+_warp__config__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config init commands' commands "$@"
+}
+(( $+functions[_warp__config__path_commands] )) ||
+_warp__config__path_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config path commands' commands "$@"
+}
+(( $+functions[_warp__config__set_commands] )) ||
+_warp__config__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp config set commands' commands "$@"
+}
+(( $+functions[_warp__help_commands] )) ||
+_warp__help_commands() {
+    local commands; commands=(
+'law:Search and view laws (국가법령)' \
+'ordinance:Search and view local ordinances (자치법규)' \
+'precedent:Search precedents (판례)' \
+'admrule:Search administrative rules (행정규칙)' \
+'interpretation:Search legal interpretations (법령해석례)' \
+'search:Unified search across all sources' \
+'config:Manage configuration' \
+'version:Show version information' \
+'completions:Generate shell completion scripts' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp help commands' commands "$@"
+}
+(( $+functions[_warp__help__admrule_commands] )) ||
+_warp__help__admrule_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help admrule commands' commands "$@"
+}
+(( $+functions[_warp__help__completions_commands] )) ||
+_warp__help__completions_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help completions commands' commands "$@"
+}
+(( $+functions[_warp__help__config_commands] )) ||
+_warp__help__config_commands() {
+    local commands; commands=(
+'set:Set a configuration value' \
+'get:Get a configuration value' \
+'path:Show configuration file path' \
+'init:Initialize configuration' \
+    )
+    _describe -t commands 'warp help config commands' commands "$@"
+}
+(( $+functions[_warp__help__config__get_commands] )) ||
+_warp__help__config__get_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help config get commands' commands "$@"
+}
+(( $+functions[_warp__help__config__init_commands] )) ||
+_warp__help__config__init_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help config init commands' commands "$@"
+}
+(( $+functions[_warp__help__config__path_commands] )) ||
+_warp__help__config__path_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help config path commands' commands "$@"
+}
+(( $+functions[_warp__help__config__set_commands] )) ||
+_warp__help__config__set_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help config set commands' commands "$@"
+}
+(( $+functions[_warp__help__help_commands] )) ||
+_warp__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help help commands' commands "$@"
+}
+(( $+functions[_warp__help__interpretation_commands] )) ||
+_warp__help__interpretation_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help interpretation commands' commands "$@"
+}
+(( $+functions[_warp__help__law_commands] )) ||
+_warp__help__law_commands() {
+    local commands; commands=(
+'search:Search for laws' \
+'detail:Get law details' \
+'history:Get law history' \
+    )
+    _describe -t commands 'warp help law commands' commands "$@"
+}
+(( $+functions[_warp__help__law__detail_commands] )) ||
+_warp__help__law__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help law detail commands' commands "$@"
+}
+(( $+functions[_warp__help__law__history_commands] )) ||
+_warp__help__law__history_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help law history commands' commands "$@"
+}
+(( $+functions[_warp__help__law__search_commands] )) ||
+_warp__help__law__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help law search commands' commands "$@"
+}
+(( $+functions[_warp__help__ordinance_commands] )) ||
+_warp__help__ordinance_commands() {
+    local commands; commands=(
+'search:Search for ordinances' \
+'detail:Get ordinance details' \
+    )
+    _describe -t commands 'warp help ordinance commands' commands "$@"
+}
+(( $+functions[_warp__help__ordinance__detail_commands] )) ||
+_warp__help__ordinance__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help ordinance detail commands' commands "$@"
+}
+(( $+functions[_warp__help__ordinance__search_commands] )) ||
+_warp__help__ordinance__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help ordinance search commands' commands "$@"
+}
+(( $+functions[_warp__help__precedent_commands] )) ||
+_warp__help__precedent_commands() {
+    local commands; commands=(
+'search:Search for precedents' \
+'detail:Get precedent details' \
+    )
+    _describe -t commands 'warp help precedent commands' commands "$@"
+}
+(( $+functions[_warp__help__precedent__detail_commands] )) ||
+_warp__help__precedent__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help precedent detail commands' commands "$@"
+}
+(( $+functions[_warp__help__precedent__search_commands] )) ||
+_warp__help__precedent__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help precedent search commands' commands "$@"
+}
+(( $+functions[_warp__help__search_commands] )) ||
+_warp__help__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help search commands' commands "$@"
+}
+(( $+functions[_warp__help__version_commands] )) ||
+_warp__help__version_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp help version commands' commands "$@"
+}
+(( $+functions[_warp__interpretation_commands] )) ||
+_warp__interpretation_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp interpretation commands' commands "$@"
+}
+(( $+functions[_warp__law_commands] )) ||
+_warp__law_commands() {
+    local commands; commands=(
+'search:Search for laws' \
+'detail:Get law details' \
+'history:Get law history' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp law commands' commands "$@"
+}
+(( $+functions[_warp__law__detail_commands] )) ||
+_warp__law__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp law detail commands' commands "$@"
+}
+(( $+functions[_warp__law__help_commands] )) ||
+_warp__law__help_commands() {
+    local commands; commands=(
+'search:Search for laws' \
+'detail:Get law details' \
+'history:Get law history' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp law help commands' commands "$@"
+}
+(( $+functions[_warp__law__help__detail_commands] )) ||
+_warp__law__help__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp law help detail commands' commands "$@"
+}
+(( $+functions[_warp__law__help__help_commands] )) ||
+_warp__law__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp law help help commands' commands "$@"
+}
+(( $+functions[_warp__law__help__history_commands] )) ||
+_warp__law__help__history_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp law help history commands' commands "$@"
+}
+(( $+functions[_warp__law__help__search_commands] )) ||
+_warp__law__help__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp law help search commands' commands "$@"
+}
+(( $+functions[_warp__law__history_commands] )) ||
+_warp__law__history_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp law history commands' commands "$@"
+}
+(( $+functions[_warp__law__search_commands] )) ||
+_warp__law__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp law search commands' commands "$@"
+}
+(( $+functions[_warp__ordinance_commands] )) ||
+_warp__ordinance_commands() {
+    local commands; commands=(
+'search:Search for ordinances' \
+'detail:Get ordinance details' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp ordinance commands' commands "$@"
+}
+(( $+functions[_warp__ordinance__detail_commands] )) ||
+_warp__ordinance__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp ordinance detail commands' commands "$@"
+}
+(( $+functions[_warp__ordinance__help_commands] )) ||
+_warp__ordinance__help_commands() {
+    local commands; commands=(
+'search:Search for ordinances' \
+'detail:Get ordinance details' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp ordinance help commands' commands "$@"
+}
+(( $+functions[_warp__ordinance__help__detail_commands] )) ||
+_warp__ordinance__help__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp ordinance help detail commands' commands "$@"
+}
+(( $+functions[_warp__ordinance__help__help_commands] )) ||
+_warp__ordinance__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp ordinance help help commands' commands "$@"
+}
+(( $+functions[_warp__ordinance__help__search_commands] )) ||
+_warp__ordinance__help__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp ordinance help search commands' commands "$@"
+}
+(( $+functions[_warp__ordinance__search_commands] )) ||
+_warp__ordinance__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp ordinance search commands' commands "$@"
+}
+(( $+functions[_warp__precedent_commands] )) ||
+_warp__precedent_commands() {
+    local commands; commands=(
+'search:Search for precedents' \
+'detail:Get precedent details' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp precedent commands' commands "$@"
+}
+(( $+functions[_warp__precedent__detail_commands] )) ||
+_warp__precedent__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp precedent detail commands' commands "$@"
+}
+(( $+functions[_warp__precedent__help_commands] )) ||
+_warp__precedent__help_commands() {
+    local commands; commands=(
+'search:Search for precedents' \
+'detail:Get precedent details' \
+'help:Print this message or the help of the given subcommand(s)' \
+    )
+    _describe -t commands 'warp precedent help commands' commands "$@"
+}
+(( $+functions[_warp__precedent__help__detail_commands] )) ||
+_warp__precedent__help__detail_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp precedent help detail commands' commands "$@"
+}
+(( $+functions[_warp__precedent__help__help_commands] )) ||
+_warp__precedent__help__help_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp precedent help help commands' commands "$@"
+}
+(( $+functions[_warp__precedent__help__search_commands] )) ||
+_warp__precedent__help__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp precedent help search commands' commands "$@"
+}
+(( $+functions[_warp__precedent__search_commands] )) ||
+_warp__precedent__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp precedent search commands' commands "$@"
+}
+(( $+functions[_warp__search_commands] )) ||
+_warp__search_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp search commands' commands "$@"
+}
+(( $+functions[_warp__version_commands] )) ||
+_warp__version_commands() {
+    local commands; commands=()
+    _describe -t commands 'warp version commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_warp" ]; then
+    _warp "$@"
+else
+    compdef _warp warp
+fi
