@@ -37,19 +37,19 @@ jobs:
             ${{ runner.os }}-cargo-audit-
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        run: cargo install cargo-audit --locked --force
 
       - name: Run audit
         run: cargo audit
 
       - name: Check for outdated dependencies
         run: |
-          cargo install cargo-outdated --locked
+          cargo install cargo-outdated --locked --force
           cargo outdated --exit-code 1 || true
 
       - name: Check licenses
         run: |
-          cargo install cargo-license --locked
+          cargo install cargo-license --locked --force
           cargo license --json > licenses.json
           echo "## License Summary" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
