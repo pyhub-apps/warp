@@ -214,7 +214,7 @@ impl Formatter {
     fn format_search_markdown(&self, response: &SearchResponse) -> Result<String> {
         let mut result = String::new();
 
-        result.push_str(&format!("# 검색 결과\n\n"));
+        result.push_str("# 검색 결과\n\n");
         result.push_str(&format!("- **총 결과**: {}\n", response.total_count));
         result.push_str(&format!(
             "- **페이지**: {}/{}\n",
@@ -283,13 +283,13 @@ impl Formatter {
         let mut wtr = csv::Writer::from_writer(vec![]);
 
         // Write headers
-        wtr.write_record(&["번호", "법령명", "법령번호", "종류", "소관부처", "시행일"])?;
+        wtr.write_record(["번호", "법령명", "법령번호", "종류", "소관부처", "시행일"])?;
 
         // Write data
         for (idx, item) in response.items.iter().enumerate() {
             let row_num =
                 ((response.page_no - 1) * response.page_size + idx as u32 + 1).to_string();
-            wtr.write_record(&[
+            wtr.write_record([
                 &row_num,
                 &item.title,
                 item.law_no.as_deref().unwrap_or(""),
@@ -329,7 +329,7 @@ impl Formatter {
             html.push_str("</style>\n</head>\n<body>\n");
         }
 
-        html.push_str(&format!("<h1>검색 결과</h1>\n"));
+        html.push_str("<h1>검색 결과</h1>\n");
         html.push_str(&format!(
             "<p>총 {}건 | 페이지 {}/{}</p>\n",
             response.total_count,
@@ -378,29 +378,29 @@ impl Formatter {
         let mut wtr = csv::Writer::from_writer(vec![]);
 
         // Write basic info as key-value pairs
-        wtr.write_record(&["항목", "내용"])?;
-        wtr.write_record(&["법령명", &detail.law_name])?;
+        wtr.write_record(["항목", "내용"])?;
+        wtr.write_record(["법령명", &detail.law_name])?;
 
         if let Some(law_no) = &detail.law_no {
-            wtr.write_record(&["법령번호", law_no])?;
+            wtr.write_record(["법령번호", law_no])?;
         }
         if let Some(law_type) = &detail.law_type {
-            wtr.write_record(&["법령종류", law_type])?;
+            wtr.write_record(["법령종류", law_type])?;
         }
         if let Some(department) = &detail.department {
-            wtr.write_record(&["소관부처", department])?;
+            wtr.write_record(["소관부처", department])?;
         }
         if let Some(enforcement_date) = &detail.enforcement_date {
-            wtr.write_record(&["시행일자", enforcement_date])?;
+            wtr.write_record(["시행일자", enforcement_date])?;
         }
         if let Some(revision_date) = &detail.revision_date {
-            wtr.write_record(&["개정일자", revision_date])?;
+            wtr.write_record(["개정일자", revision_date])?;
         }
 
         // Add articles if present
         if !detail.articles.is_empty() {
-            wtr.write_record(&["", ""])?; // Empty row
-            wtr.write_record(&["조문번호", "조문내용"])?;
+            wtr.write_record(["", ""])?; // Empty row
+            wtr.write_record(["조문번호", "조문내용"])?;
             for article in &detail.articles {
                 let title = article.title.as_deref().unwrap_or("");
                 let header = if title.is_empty() {
@@ -408,7 +408,7 @@ impl Formatter {
                 } else {
                     format!("{} ({})", article.number, title)
                 };
-                wtr.write_record(&[&header, &article.content])?;
+                wtr.write_record([&header, &article.content])?;
             }
         }
 
@@ -535,11 +535,11 @@ impl Formatter {
         let mut wtr = csv::Writer::from_writer(vec![]);
 
         // Write headers
-        wtr.write_record(&["순번", "개정일자", "시행일자", "개정구분", "개정이유"])?;
+        wtr.write_record(["순번", "개정일자", "시행일자", "개정구분", "개정이유"])?;
 
         // Write data
         for entry in &history.entries {
-            wtr.write_record(&[
+            wtr.write_record([
                 &entry.revision_no.to_string(),
                 &entry.revision_date,
                 entry.enforcement_date.as_deref().unwrap_or(""),

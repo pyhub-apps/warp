@@ -234,20 +234,20 @@ impl MetricsSnapshot {
     pub fn format(&self) -> String {
         let mut output = String::new();
 
-        output.push_str(&format!("=== Performance Metrics ===\n"));
+        output.push_str("=== Performance Metrics ===\n");
         output.push_str(&format!("Total Requests: {}\n", self.total_requests));
         output.push_str(&format!("Success Rate: {:.1}%\n", self.success_rate));
         output.push_str(&format!("Cache Hit Rate: {:.1}%\n", self.cache_hit_rate));
-        output.push_str(&format!("\nTiming:\n"));
+        output.push_str("\nTiming:\n");
         output.push_str(&format!("  Average: {}ms\n", self.avg_response_time_ms));
         output.push_str(&format!("  Min: {}ms\n", self.min_response_time_ms));
         output.push_str(&format!("  Max: {}ms\n", self.max_response_time_ms));
-        output.push_str(&format!("\nMemory:\n"));
+        output.push_str("\nMemory:\n");
         output.push_str(&format!("  Current: {} bytes\n", self.current_memory_usage));
         output.push_str(&format!("  Peak: {} bytes\n", self.peak_memory_usage));
 
         if !self.api_stats.is_empty() {
-            output.push_str(&format!("\nPer-API Stats:\n"));
+            output.push_str("\nPer-API Stats:\n");
             for (api, stats) in &self.api_stats {
                 let avg_time = if stats.requests > 0 {
                     stats.total_time_ms / stats.requests

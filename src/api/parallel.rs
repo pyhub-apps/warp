@@ -106,7 +106,7 @@ impl ParallelExecutor {
     }
 
     /// Create a parallel executor with default configuration
-    pub fn default() -> Self {
+    pub fn with_defaults() -> Self {
         Self {
             config: ParallelConfig::default(),
         }
@@ -259,7 +259,7 @@ pub async fn search_all_apis(
     clients: Vec<(ApiType, Arc<dyn LegalApiClient>)>,
     request: UnifiedSearchRequest,
 ) -> Result<ParallelSearchResult> {
-    let executor = ParallelExecutor::default();
+    let executor = ParallelExecutor::with_defaults();
     executor.search_parallel(clients, request).await
 }
 
@@ -368,7 +368,7 @@ mod tests {
             ..Default::default()
         };
 
-        let executor = ParallelExecutor::default();
+        let executor = ParallelExecutor::with_defaults();
         let result = executor.search_parallel(clients, request).await.unwrap();
 
         assert_eq!(result.successes.len(), 2);
@@ -396,7 +396,7 @@ mod tests {
             ..Default::default()
         };
 
-        let executor = ParallelExecutor::default();
+        let executor = ParallelExecutor::with_defaults();
         let result = executor.search_parallel(clients, request).await.unwrap();
 
         assert_eq!(result.successes.len(), 1);

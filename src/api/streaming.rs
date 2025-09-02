@@ -1,10 +1,10 @@
 use super::types::*;
 use super::{ApiType, LegalApiClient};
-use crate::error::{Result, WarpError};
+use crate::error::Result;
 use futures::stream::{self, Stream, StreamExt};
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::time::{interval, Duration};
+use tokio::time::Duration;
 
 /// Configuration for streaming large result sets
 #[derive(Debug, Clone)]
@@ -217,6 +217,7 @@ impl StreamStats {
 /// Parallel streaming for multiple APIs
 pub struct ParallelSearchStream {
     streams: Vec<Pin<Box<dyn Stream<Item = Result<SearchItem>> + Send>>>,
+    #[allow(dead_code)]
     config: StreamConfig,
 }
 
