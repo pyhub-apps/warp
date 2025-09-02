@@ -69,6 +69,7 @@ keywords = ["cli", "legal", "korea", "law", "search"]
 license = "MIT"
 name = "warp"
 repository = "https://github.com/pyhub-apps/warp"
+rust-version = "1.82.0"
 version = "2.2536.25"
 
 # Profile for benchmarks with debug info
