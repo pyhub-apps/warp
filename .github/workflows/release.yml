@@ -241,8 +241,8 @@ jobs:
           if [[ "${{ matrix.archive }}" == "tar.gz" ]]; then
             tar -czf ../warp-${{ matrix.target }}.tar.gz *
           else
-            # Windows zip
-            powershell Compress-Archive -Path * -DestinationPath ../warp-${{ matrix.target }}.zip
+            # Windows zip - use 7z which is available on Windows runners
+            7z a -tzip ../warp-${{ matrix.target }}.zip *
           fi
         shell: bash
 
