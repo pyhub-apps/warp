@@ -177,10 +177,7 @@ jobs:
             ${{ runner.os }}-cargo-audit-
             
       - name: Install cargo-audit
-        run: |
-          if ! command -v cargo-audit &> /dev/null; then
-            cargo install cargo-audit
-          fi
+        run: cargo install cargo-audit --force
         
       - name: Run security audit
         run: cargo audit
