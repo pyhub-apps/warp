@@ -7,7 +7,7 @@ use crate::cli::OutputFormat;
 use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
-use crate::progress::{ApiProgress, ProgressManager};
+use crate::progress::{messages, ApiStage, EnhancedApiProgress, ProgressManager};
 use std::sync::Arc;
 
 /// Parameters for law search operation
@@ -119,13 +119,33 @@ async fn search_laws(
         ..Default::default()
     };
 
-    // Show progress while searching
-    let progress = ApiProgress::new(progress_manager.clone(), "국가법령정보센터");
-    progress.set_message(&format!("'{}' 검색 중...", params.query));
+    // Show enhanced progress with stages
+    let mut progress = EnhancedApiProgress::new(progress_manager.clone(), "국가법령정보센터");
+
+    // Stage 1: Connecting
+    progress.advance_stage(
+        ApiStage::Connecting,
+        &format!("'{}' 검색을 위한 연결 중", params.query),
+    );
+
+    // Stage 2: Searching
+    progress.advance_stage(
+        ApiStage::Searching,
+        &format!("'{}' 검색 요청 전송 중", params.query),
+    );
 
     let response = client.search(request).await?;
 
-    progress.finish_with_message(&format!("검색 완료: {}개 결과", response.total_count));
+    // Stage 3: Parsing
+    progress.advance_stage(ApiStage::Parsing, "응답 데이터 파싱 중");
+
+    // Stage 4: Complete
+    let result_message = messages::search_complete_with_time(
+        "국가법령정보센터",
+        response.total_count as usize,
+        progress.elapsed().as_millis() as u64,
+    );
+    progress.complete_success(&result_message);
 
     if response.items.is_empty() {
         println!("No results found for your search query.");
@@ -144,13 +164,19 @@ async fn get_law_detail(
     format: OutputFormat,
     progress_manager: Arc<ProgressManager>,
 ) -> Result<()> {
-    // Show progress while fetching details
-    let progress = ApiProgress::new(progress_manager.clone(), "국가법령정보센터");
-    progress.set_message(&format!("법령 상세 정보 조회 중... (ID: {})", id));
+    // Show enhanced progress for detail retrieval
+    let mut progress = EnhancedApiProgress::new(progress_manager.clone(), "국가법령정보센터");
+
+    progress.advance_stage(
+        ApiStage::Connecting,
+        &format!("법령 상세 정보 연결 중 (ID: {})", id),
+    );
+    progress.advance_stage(ApiStage::Searching, "상세 정보 요청 전송 중");
 
     let detail = client.get_detail(&id).await?;
 
-    progress.finish_and_clear();
+    progress.advance_stage(ApiStage::Parsing, "상세 정보 파싱 중");
+    progress.complete_success("법령 상세 정보 조회 완료");
     let output = output::format_law_detail(&detail, format)?;
     println!("{}", output);
     Ok(())
@@ -162,13 +188,19 @@ async fn get_law_history(
     format: OutputFormat,
     progress_manager: Arc<ProgressManager>,
 ) -> Result<()> {
-    // Show progress while fetching history
-    let progress = ApiProgress::new(progress_manager.clone(), "국가법령정보센터");
-    progress.set_message(&format!("법령 개정 이력 조회 중... (ID: {})", id));
+    // Show enhanced progress for history retrieval
+    let mut progress = EnhancedApiProgress::new(progress_manager.clone(), "국가법령정보센터");
+
+    progress.advance_stage(
+        ApiStage::Connecting,
+        &format!("법령 개정 이력 연결 중 (ID: {})", id),
+    );
+    progress.advance_stage(ApiStage::Searching, "개정 이력 요청 전송 중");
 
     let history = client.get_history(&id).await?;
 
-    progress.finish_and_clear();
+    progress.advance_stage(ApiStage::Parsing, "개정 이력 파싱 중");
+    progress.complete_success("법령 개정 이력 조회 완료");
     let output = output::format_law_history(&history, format)?;
     println!("{}", output);
     Ok(())

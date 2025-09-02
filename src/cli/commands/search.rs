@@ -7,7 +7,7 @@ use crate::cli::OutputFormat;
 use crate::config::Config;
 use crate::error::{Result, WarpError};
 use crate::output;
-use crate::progress::{messages, ProgressManager};
+use crate::progress::{messages, ApiStage, EnhancedApiProgress, ProgressManager};
 use chrono::Utc;
 use futures::future::join_all;
 use std::sync::Arc;
@@ -86,8 +86,34 @@ pub async fn execute(
                 let api_name = api_type.display_name().to_string();
 
                 tasks.push(tokio::spawn(async move {
-                    pm.show_message(&format!("{} 검색 시작...", api_name));
+                    // Create enhanced progress for each API
+                    let mut api_progress = EnhancedApiProgress::new(pm.clone(), &api_name);
+
+                    // Stage 1: Connecting
+                    api_progress.advance_stage(ApiStage::Connecting, "API 서버 연결 중");
+
+                    // Stage 2: Searching
+                    api_progress.advance_stage(ApiStage::Searching, "검색 요청 전송 중");
+
                     let result = client.search(req).await;
+
+                    // Stage 3: Parsing
+                    api_progress.advance_stage(ApiStage::Parsing, "응답 데이터 파싱 중");
+
+                    match &result {
+                        Ok(response) => {
+                            let completion_msg = messages::search_complete_with_time(
+                                &api_name,
+                                response.items.len(),
+                                api_progress.elapsed().as_millis() as u64,
+                            );
+                            api_progress.complete_success(&completion_msg);
+                        }
+                        Err(e) => {
+                            api_progress.complete_error(&format!("검색 실패: {}", e));
+                        }
+                    }
+
                     (api_type, result)
                 }));
             }
@@ -113,10 +139,6 @@ pub async fn execute(
 
         match result {
             Ok((api_type, Ok(response))) => {
-                progress_manager.show_message(&messages::search_complete(
-                    api_type.display_name(),
-                    response.items.len(),
-                ));
                 all_responses.push((api_type, response));
             }
             Ok((api_type, Err(e))) => {
