@@ -5,32 +5,24 @@
 # Use pre-built Docker images for faster builds
 pre-build = []
 
+# Environment variables for all targets
+[build.env]
+passthrough = [
+  "RUST_BACKTRACE",
+  "CARGO_TERM_COLOR"
+]
+
+[target.aarch64-apple-darwin]
+
+[target.aarch64-pc-windows-msvc]
+
 [target.aarch64-unknown-linux-gnu]
 # Use the latest cross image
 image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest"
 
-[target.x86_64-unknown-linux-gnu]
-image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:latest"
-
-[target.aarch64-apple-darwin]
-# macOS cross-compilation from macOS runners
-# No Docker image needed as we build on macOS directly
-
 [target.x86_64-apple-darwin]
-# macOS cross-compilation from macOS runners
-# No Docker image needed as we build on macOS directly
 
 [target.x86_64-pc-windows-msvc]
-# Windows builds run on Windows runners
-# No Docker image needed
 
-[target.aarch64-pc-windows-msvc]
-# Windows ARM64 builds run on Windows runners
-# No Docker image needed
-
-# Environment variables for all targets
-[build.env]
-passthrough = [
-    "RUST_BACKTRACE",
-    "CARGO_TERM_COLOR",
-]
+[target.x86_64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:latest"

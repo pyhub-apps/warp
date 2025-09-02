@@ -246,7 +246,7 @@ impl ParallelSearchStream {
         stream::select_all(self.streams)
     }
 
-    /// Merge all streams with buffering for better performance  
+    /// Merge all streams with buffering for better performance
     pub fn merge_buffered(self) -> impl Stream<Item = Result<SearchItem>> {
         // Note: buffered() requires items to be futures, not results
         // For now, just use the fair merge
@@ -296,13 +296,13 @@ pub fn rate_limit_stream<T>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::client::ClientConfig;
     use async_trait::async_trait;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     // Mock client for testing streaming
     struct MockStreamClient {
         total_items: u32,
+        #[allow(dead_code)]
         page_size: u32,
         delay: Duration,
         call_count: Arc<AtomicUsize>,

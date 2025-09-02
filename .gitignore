@@ -36,3 +36,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Node modules and prettier cache (for pre-commit)
+node_modules/

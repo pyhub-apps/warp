@@ -91,7 +91,7 @@ mod api_tests {
             .create_async()
             .await;
 
-        let config = ClientConfig {
+        let _config = ClientConfig {
             api_key: "test_key".to_string(),
             ..Default::default()
         };

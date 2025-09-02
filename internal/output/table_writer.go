@@ -101,14 +101,14 @@ func RenderTable(headers []string, rows [][]string, style *TableStyle) string {
 		// For standard law search table: 번호, 법령ID, 법령명, 법령구분, 소관부처, 시행일자
 		// Or unified search table: 번호, 법령명, 구분, 출처, 소관부처, 시행일자
 		columnWidths := []int{4, 8, 25, 10, 20, 11}
-		
+
 		// Adjust widths based on terminal width if available
 		totalWidth := 0
 		for _, w := range columnWidths {
 			totalWidth += w
 		}
 		totalWidth += len(columnWidths) * 3 // account for separators
-		
+
 		if style.TerminalWidth > 0 && totalWidth > style.TerminalWidth {
 			// Scale down proportionally if needed
 			scale := float64(style.TerminalWidth-20) / float64(totalWidth)
@@ -119,7 +119,7 @@ func RenderTable(headers []string, rows [][]string, style *TableStyle) string {
 				}
 			}
 		}
-		
+
 		// Apply minimum column widths to each column
 		for i, width := range columnWidths {
 			if i < len(headers) {

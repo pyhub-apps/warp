@@ -5,12 +5,14 @@ Warp CLI를 시스템에 설치하는 방법을 안내합니다.
 ## 📋 시스템 요구사항
 
 ### 최소 요구사항
+
 - **Rust**: 1.70 이상
 - **메모리**: 512MB RAM
 - **디스크**: 10MB 여유 공간
 - **네트워크**: 인터넷 연결 (API 호출용)
 
 ### 지원 운영체제
+
 - ✅ Linux (x86_64, aarch64)
 - ✅ macOS (Intel, Apple Silicon)
 - ✅ Windows 10/11
@@ -30,6 +32,7 @@ cargo install warp
 ```
 
 #### 설치 확인
+
 ```bash
 warp --version
 ```
@@ -60,6 +63,7 @@ Copy-Item target\release\warp.exe C:\Windows\System32\
 GitHub Releases에서 운영체제에 맞는 바이너리를 다운로드합니다.
 
 #### Linux (x86_64)
+
 ```bash
 # 최신 릴리스 다운로드
 wget https://github.com/pyhub-apps/warp/releases/latest/download/warp-linux-x86_64.tar.gz
@@ -73,6 +77,7 @@ chmod +x /usr/local/bin/warp
 ```
 
 #### macOS (Intel)
+
 ```bash
 # 최신 릴리스 다운로드
 curl -L https://github.com/pyhub-apps/warp/releases/latest/download/warp-macos-x86_64.tar.gz -o warp.tar.gz
@@ -89,6 +94,7 @@ xattr -d com.apple.quarantine /usr/local/bin/warp
 ```
 
 #### macOS (Apple Silicon)
+
 ```bash
 # 최신 릴리스 다운로드
 curl -L https://github.com/pyhub-apps/warp/releases/latest/download/warp-macos-aarch64.tar.gz -o warp.tar.gz
@@ -105,7 +111,9 @@ xattr -d com.apple.quarantine /usr/local/bin/warp
 ```
 
 #### Windows
-1. [Releases 페이지](https://github.com/pyhub-apps/warp/releases)에서 `warp-windows-x86_64.zip` 다운로드
+
+1. [Releases 페이지](https://github.com/pyhub-apps/warp/releases)에서
+   `warp-windows-x86_64.zip` 다운로드
 2. 압축 해제
 3. `warp.exe`를 원하는 위치로 이동 (예: `C:\Program Files\warp\`)
 4. 시스템 PATH에 추가:
@@ -133,23 +141,27 @@ Shell 자동완성을 설치하면 Tab 키로 명령어와 옵션을 자동완�
 ### 수동 설치
 
 #### Bash
+
 ```bash
 warp completions bash > ~/.bash_completion.d/warp.bash
 source ~/.bash_completion.d/warp.bash
 ```
 
 #### Zsh
+
 ```bash
 warp completions zsh > ~/.zsh/completions/_warp
 exec zsh
 ```
 
 #### Fish
+
 ```bash
 warp completions fish > ~/.config/fish/completions/warp.fish
 ```
 
 #### PowerShell
+
 ```powershell
 warp completions powershell >> $PROFILE
 ```
@@ -163,6 +175,7 @@ warp completions powershell >> $PROFILE
 ## 🔧 설치 후 설정
 
 ### 1. 설치 확인
+
 ```bash
 # 버전 확인
 warp --version
@@ -172,6 +185,7 @@ warp --help
 ```
 
 ### 2. 설정 초기화
+
 ```bash
 # 설정 파일 생성
 warp config init
@@ -181,6 +195,7 @@ warp config path
 ```
 
 ### 3. API 키 설정
+
 ```bash
 # API 키 설정 (https://open.law.go.kr 에서 발급)
 warp config set law.key YOUR_API_KEY
@@ -190,6 +205,7 @@ warp config get law.key
 ```
 
 ### 4. 첫 검색 테스트
+
 ```bash
 # 간단한 검색으로 설치 확인
 warp law "민법" --size 1
@@ -198,6 +214,7 @@ warp law "민법" --size 1
 ## 🐛 설치 문제 해결
 
 ### Rust/Cargo가 설치되지 않음
+
 ```bash
 # Rust 설치
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -207,6 +224,7 @@ source $HOME/.cargo/env
 ```
 
 ### 권한 오류 (Linux/macOS)
+
 ```bash
 # sudo 없이 설치하려면 사용자 디렉토리 사용
 mkdir -p ~/.local/bin
@@ -218,10 +236,13 @@ source ~/.bashrc
 ```
 
 ### Windows에서 실행 오류
+
 - Visual C++ 재배포 가능 패키지가 필요할 수 있습니다
-- [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) 설치
+- [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+  설치
 
 ### macOS 보안 경고
+
 ```bash
 # "개발자를 확인할 수 없음" 오류 시
 xattr -d com.apple.quarantine /usr/local/bin/warp
@@ -230,11 +251,13 @@ xattr -d com.apple.quarantine /usr/local/bin/warp
 ## 🔄 업데이트
 
 ### Cargo로 설치한 경우
+
 ```bash
 cargo install warp --force
 ```
 
 ### 소스에서 빌드한 경우
+
 ```bash
 cd warp
 git pull
@@ -245,11 +268,13 @@ sudo cp target/release/warp /usr/local/bin/
 ## 🗑️ 제거
 
 ### Cargo로 설치한 경우
+
 ```bash
 cargo uninstall warp
 ```
 
 ### 수동 설치한 경우
+
 ```bash
 # Linux/macOS
 sudo rm /usr/local/bin/warp

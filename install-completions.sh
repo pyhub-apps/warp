@@ -57,7 +57,7 @@ echo -e "Detected shell: ${GREEN}$CURRENT_SHELL${NC}"
 
 install_bash_completions() {
     echo "Installing Bash completions..."
-    
+
     # Try different possible locations
     if [ -d "$HOME/.bash_completion.d" ]; then
         COMPLETION_DIR="$HOME/.bash_completion.d"
@@ -70,11 +70,11 @@ install_bash_completions() {
         COMPLETION_DIR="$HOME/.bash_completion.d"
         mkdir -p "$COMPLETION_DIR"
     fi
-    
+
     "$BINARY_PATH" completions bash > "$COMPLETION_DIR/warp.bash"
-    
+
     echo -e "${GREEN}✓ Bash completions installed to $COMPLETION_DIR/warp.bash${NC}"
-    
+
     # Add to .bashrc if not already present
     if [ -f "$HOME/.bashrc" ]; then
         if ! grep -q "bash_completion.d/warp.bash" "$HOME/.bashrc"; then
@@ -84,13 +84,13 @@ install_bash_completions() {
             echo -e "${GREEN}✓ Added to ~/.bashrc${NC}"
         fi
     fi
-    
+
     echo -e "${YELLOW}Note: Restart your shell or run 'source ~/.bashrc' to enable completions${NC}"
 }
 
 install_zsh_completions() {
     echo "Installing Zsh completions..."
-    
+
     # Check for custom completion directory in fpath
     COMPLETION_DIR=""
     if [ -n "$fpath" ]; then
@@ -102,7 +102,7 @@ install_zsh_completions() {
             fi
         done
     fi
-    
+
     # Fallback locations
     if [ -z "$COMPLETION_DIR" ]; then
         if [ -d "$HOME/.zsh/completions" ]; then
@@ -115,11 +115,11 @@ install_zsh_completions() {
             mkdir -p "$COMPLETION_DIR"
         fi
     fi
-    
+
     "$BINARY_PATH" completions zsh > "$COMPLETION_DIR/_warp"
-    
+
     echo -e "${GREEN}✓ Zsh completions installed to $COMPLETION_DIR/_warp${NC}"
-    
+
     # Add to .zshrc if needed
     if [ "$COMPLETION_DIR" = "$HOME/.zsh/completions" ] && [ -f "$HOME/.zshrc" ]; then
         if ! grep -q "fpath.*\.zsh/completions" "$HOME/.zshrc"; then
@@ -130,27 +130,27 @@ install_zsh_completions() {
             echo -e "${GREEN}✓ Added to ~/.zshrc${NC}"
         fi
     fi
-    
+
     echo -e "${YELLOW}Note: Restart your shell or run 'exec zsh' to enable completions${NC}"
 }
 
 install_fish_completions() {
     echo "Installing Fish completions..."
-    
+
     COMPLETION_DIR="$HOME/.config/fish/completions"
     mkdir -p "$COMPLETION_DIR"
-    
+
     "$BINARY_PATH" completions fish > "$COMPLETION_DIR/warp.fish"
-    
+
     echo -e "${GREEN}✓ Fish completions installed to $COMPLETION_DIR/warp.fish${NC}"
     echo -e "${YELLOW}Note: Completions will be available immediately in new Fish shells${NC}"
 }
 
 install_powershell_completions() {
     echo "Installing PowerShell completions..."
-    
+
     "$BINARY_PATH" completions powershell > warp.ps1
-    
+
     echo -e "${GREEN}✓ PowerShell completions generated to warp.ps1${NC}"
     echo ""
     echo "To install PowerShell completions, add the following to your PowerShell profile:"

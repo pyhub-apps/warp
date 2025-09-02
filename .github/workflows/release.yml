@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g., v0.1.0)'
+        description: "Release tag (e.g., v0.1.0)"
         required: true
         type: string
 
@@ -54,16 +54,16 @@ jobs:
             echo "Generating changelog from $PREV_TAG to ${{ steps.get_version.outputs.version }}"
             COMMITS=$(git log ${PREV_TAG}..${{ steps.get_version.outputs.version }} --pretty=format:"- %s (%h)")
           fi
-          
+
           # Create changelog file
           cat > CHANGELOG.md << EOF
           ## What's Changed
-          
+
           ${COMMITS}
-          
+
           **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ steps.get_version.outputs.version }}
           EOF
-          
+
           # Output for release body
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           cat CHANGELOG.md >> $GITHUB_OUTPUT
@@ -77,58 +77,58 @@ jobs:
           # Create release body file
           cat > release_body.md << 'EOF'
           ${{ steps.changelog.outputs.changelog }}
-          
+
           ## Installation
-          
+
           ### Quick Install (Unix-like systems)
           ```bash
           curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/install.sh | sh
           ```
-          
+
           ### Manual Installation
           Download the appropriate binary for your platform from the assets below.
-          
+
           #### macOS (Apple Silicon)
           ```bash
           curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-aarch64-apple-darwin.tar.gz
           tar -xzf warp-aarch64-apple-darwin.tar.gz
           sudo mv warp /usr/local/bin/
           ```
-          
+
           #### macOS (Intel)
           ```bash
           curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-apple-darwin.tar.gz
           tar -xzf warp-x86_64-apple-darwin.tar.gz
           sudo mv warp /usr/local/bin/
           ```
-          
+
           #### Linux (x86_64)
           ```bash
           curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.version }}/warp-x86_64-unknown-linux-gnu.tar.gz
           tar -xzf warp-x86_64-unknown-linux-gnu.tar.gz
           sudo mv warp /usr/local/bin/
           ```
-          
+
           #### Windows (x86_64)
           Download `warp-x86_64-pc-windows-msvc.zip` and extract to a directory in your PATH.
-          
+
           ### Verify Installation
           ```bash
           warp --version
           ```
           EOF
-          
+
           # Create release
           PRERELEASE=""
           if [[ "${{ steps.get_version.outputs.version }}" == *"-"* ]]; then
             PRERELEASE="--prerelease"
           fi
-          
+
           gh release create "${{ steps.get_version.outputs.version }}" \
             --title "Release ${{ steps.get_version.outputs.version }}" \
             --notes-file release_body.md \
             $PRERELEASE
-          
+
           # Get upload URL for compatibility
           echo "upload_url=$(gh api repos/${{ github.repository }}/releases/tags/${{ steps.get_version.outputs.version }} --jq '.upload_url')" >> $GITHUB_OUTPUT
 
@@ -142,32 +142,32 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             archive: tar.gz
-            
+
           - os: macos-latest
             target: aarch64-apple-darwin
             archive: tar.gz
-            
+
           # Linux builds
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             archive: tar.gz
-            
+
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             archive: tar.gz
             use_cross: true
-            
+
           # Windows builds
           - os: windows-2022
             target: x86_64-pc-windows-msvc
             archive: zip
-            
+
           - os: windows-2022
             target: aarch64-pc-windows-msvc
             archive: zip
 
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -196,7 +196,9 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key:
+            ${{ runner.os }}-${{ matrix.target }}-cargo-${{
+            hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.target }}-cargo-
 
@@ -212,22 +214,22 @@ jobs:
       - name: Prepare binary
         run: |
           cd target/${{ matrix.target }}/release
-          
+
           # Strip binary on Unix-like systems
           if [[ "${{ matrix.os }}" != "windows-latest" ]]; then
             strip warp || true
           fi
-          
+
           # Create archive directory
           mkdir -p ../../../archive
-          
+
           # Copy binary
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             cp warp.exe ../../../archive/
           else
             cp warp ../../../archive/
           fi
-          
+
           # Copy additional files
           cd ../../..
           cp README.md archive/
@@ -237,7 +239,7 @@ jobs:
       - name: Create archive
         run: |
           cd archive
-          
+
           if [[ "${{ matrix.archive }}" == "tar.gz" ]]; then
             tar -czf ../warp-${{ matrix.target }}.tar.gz *
           else
@@ -259,7 +261,7 @@ jobs:
     name: Generate Checksums
     needs: [create-release, build-release]
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -268,12 +270,12 @@ jobs:
         run: |
           VERSION="${{ needs.create-release.outputs.version }}"
           REPO="${{ github.repository }}"
-          
+
           # Download all release assets
           for target in x86_64-apple-darwin aarch64-apple-darwin x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             curl -LO "https://github.com/${REPO}/releases/download/${VERSION}/warp-${target}.tar.gz"
           done
-          
+
           for target in x86_64-pc-windows-msvc aarch64-pc-windows-msvc; do
             curl -LO "https://github.com/${REPO}/releases/download/${VERSION}/warp-${target}.zip"
           done
@@ -296,24 +298,24 @@ jobs:
     name: Create Install Script
     needs: create-release
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Create install script
         run: |
           cat > install.sh << 'EOF'
           #!/bin/sh
           set -e
-          
+
           VERSION="${{ needs.create-release.outputs.version }}"
           REPO="${{ github.repository }}"
-          
+
           # Detect OS and architecture
           OS=$(uname -s | tr '[:upper:]' '[:lower:]')
           ARCH=$(uname -m)
-          
+
           # Map to Rust target triple
           case "$OS" in
               linux)
@@ -327,7 +329,7 @@ jobs:
                   exit 1
                   ;;
           esac
-          
+
           case "$ARCH" in
               x86_64)
                   ARCH_TARGET="x86_64"
@@ -340,19 +342,19 @@ jobs:
                   exit 1
                   ;;
           esac
-          
+
           TARGET="${ARCH_TARGET}-${OS_TARGET}"
           URL="https://github.com/${REPO}/releases/download/${VERSION}/warp-${TARGET}.tar.gz"
-          
+
           echo "Downloading warp ${VERSION} for ${TARGET}..."
           curl -fsSL "$URL" | tar -xz
-          
+
           echo "Installing to /usr/local/bin..."
           sudo mv warp /usr/local/bin/
-          
+
           echo "Installation complete! Run 'warp --version' to verify."
           EOF
-          
+
           chmod +x install.sh
 
       - name: Upload install script

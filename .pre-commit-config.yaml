@@ -1,0 +1,90 @@
+# Pre-commit configuration for Rust project
+# See https://pre-commit.com for more information
+
+repos:
+  # General code quality checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # Rust-specific hooks
+  - repo: local
+    hooks:
+      # Format Rust code with rustfmt
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt
+        language: system
+        types: [rust]
+        args: ["--all", "--"]
+
+      # Run Clippy for linting
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy
+        language: system
+        types: [rust]
+        args: ["--all-targets", "--all-features", "--", "-D", "warnings"]
+        pass_filenames: false
+
+      # Check that code compiles
+      - id: cargo-check
+        name: cargo check
+        entry: cargo check
+        language: system
+        types: [rust]
+        args: ["--all-targets", "--all-features"]
+        pass_filenames: false
+
+      # Run tests (optional - can be slow)
+      - id: cargo-test
+        name: cargo test
+        entry: cargo test
+        language: system
+        types: [rust]
+        args: ["--all-targets", "--all-features"]
+        pass_filenames: false
+        # Uncomment to enable tests in pre-commit
+        # stages: [manual]
+
+  # Security audit
+  - repo: local
+    hooks:
+      - id: cargo-audit
+        name: cargo audit
+        entry: cargo audit
+        language: system
+        types: [rust]
+        pass_filenames: false
+        # Only run on manual trigger to avoid slowing down commits
+        stages: [manual]
+
+  # TOML formatting
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.15.0
+    hooks:
+      - id: pretty-format-toml
+        args: [--autofix]
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [yaml, json, markdown]
+        args: [--prose-wrap=always, --print-width=80]
+
+# Global configuration
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+fail_fast: true
+minimum_pre_commit_version: 3.0.0

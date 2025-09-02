@@ -283,7 +283,6 @@ pub async fn search_with_rate_limit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::client::ClientConfig;
     use async_trait::async_trait;
     use std::sync::atomic::{AtomicUsize, Ordering};
 

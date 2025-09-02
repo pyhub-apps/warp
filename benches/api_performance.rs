@@ -1,38 +1,37 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use std::sync::Arc;
 use tokio::runtime::Runtime;
 use warp::api::client::ClientConfig;
 use warp::api::types::{ResponseType, UnifiedSearchRequest};
 use warp::api::{ApiClientFactory, ApiType};
-use warp::cache::CacheConfig;
+use warp::cache::{CacheConfig, CacheStore};
 use warp::metrics::get_global_metrics;
 
 // Mock test data
-fn create_test_config(enable_cache: bool) -> ClientConfig {
-    let cache_config = if enable_cache {
-        Some(CacheConfig {
-            max_size: 1000,
-            ttl: std::time::Duration::from_secs(300),
-            cleanup_interval: std::time::Duration::from_secs(60),
-        })
+async fn create_test_config(enable_cache: bool) -> ClientConfig {
+    let cache_store = if enable_cache {
+        Some(Arc::new(
+            CacheStore::new(CacheConfig::default()).await.unwrap(),
+        ))
     } else {
         None
     };
 
     ClientConfig {
-        nlic: Some(warp::api::nlic::NlicConfig {
-            api_key: "test_key".to_string(),
-            base_url: Some("http://test.example.com".to_string()),
-            timeout: Some(std::time::Duration::from_secs(10)),
-        }),
-        cache: cache_config,
-        ..Default::default()
+        api_key: "test_key".to_string(),
+        timeout: 10,
+        max_retries: 3,
+        retry_base_delay: 100,
+        user_agent: "test-agent/1.0".to_string(),
+        cache: cache_store,
+        bypass_cache: false,
     }
 }
 
 /// Benchmark single API search without cache
 fn bench_single_search_no_cache(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    let config = create_test_config(false);
+    let config = rt.block_on(create_test_config(false));
 
     c.bench_function("single_search_no_cache", |b| {
         b.iter(|| {
@@ -54,7 +53,7 @@ fn bench_single_search_no_cache(c: &mut Criterion) {
 /// Benchmark search with cache enabled
 fn bench_single_search_with_cache(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    let config = create_test_config(true);
+    let config = rt.block_on(create_test_config(true));
 
     c.bench_function("single_search_with_cache", |b| {
         b.iter(|| {
@@ -78,7 +77,7 @@ fn bench_client_creation(c: &mut Criterion) {
     let mut group = c.benchmark_group("client_creation");
 
     for cache_enabled in [false, true] {
-        let config = create_test_config(cache_enabled);
+        let config = rt.block_on(create_test_config(cache_enabled));
         let name = if cache_enabled {
             "with_cache"
         } else {
@@ -91,7 +90,7 @@ fn bench_client_creation(c: &mut Criterion) {
             |b, config| {
                 b.iter(|| {
                     // Create new client for each iteration to test factory performance
-                    let client = ApiClientFactory::create(ApiType::Nlic, config).unwrap();
+                    let client = ApiClientFactory::create(ApiType::Nlic, config.clone()).unwrap();
                     let request = UnifiedSearchRequest {
                         query: black_box("test".to_string()),
                         page_no: 1,
@@ -111,14 +110,17 @@ fn bench_client_creation(c: &mut Criterion) {
 /// Benchmark cache and metrics operations
 fn bench_cache_operations(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    let config = create_test_config(true);
+    let config = rt.block_on(create_test_config(true));
 
     c.bench_function("cache_operations", |b| {
         b.iter(|| {
             // Test metrics collection overhead
             let metrics = get_global_metrics();
-            metrics.record_request(black_box("test_api"));
-            metrics.record_success(black_box("test_api"));
+            metrics.record_request_success(
+                black_box("test_api"),
+                std::time::Duration::from_millis(100),
+            );
+            metrics.record_cache_hit(black_box("test_api"));
 
             let client = ApiClientFactory::create(ApiType::Nlic, config.clone()).unwrap();
             let request = UnifiedSearchRequest {
@@ -138,7 +140,7 @@ fn bench_cache_operations(c: &mut Criterion) {
 /// Benchmark memory allocation patterns
 fn bench_memory_patterns(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    let config = create_test_config(false);
+    let config = rt.block_on(create_test_config(false));
 
     c.bench_function("memory_allocation", |b| {
         b.iter(|| {

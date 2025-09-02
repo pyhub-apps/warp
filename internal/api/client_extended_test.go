@@ -335,7 +335,7 @@ func TestClient_Context(t *testing.T) {
 
 	t.Run("Context cancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
-		
+
 		// Cancel context immediately
 		cancel()
 

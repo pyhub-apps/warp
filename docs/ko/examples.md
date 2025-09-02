@@ -7,6 +7,7 @@
 ### 법령 검색 및 조회
 
 #### 간단한 법령 검색
+
 ```bash
 # 민법 검색
 warp law "민법"
@@ -19,6 +20,7 @@ warp law "도로교통법" --page 2 --size 10
 ```
 
 #### 법령 상세 정보 조회
+
 ```bash
 # 1. 먼저 법령 검색으로 ID 확인
 warp law "민법" --format json | jq '.items[0]'
@@ -33,6 +35,7 @@ warp law history MST000001
 ### 판례 검색
 
 #### 대법원 판례 검색
+
 ```bash
 # 기본 판례 검색
 warp precedent "음주운전"
@@ -45,6 +48,7 @@ warp precedent "개인정보" --date-from 20230101 --date-to 20231231
 ```
 
 #### 판례 상세 정보
+
 ```bash
 # 판례 상세 조회
 warp precedent detail CASE_ID
@@ -56,6 +60,7 @@ warp precedent "저작권" --format json > copyright_cases.json
 ### 자치법규 검색
 
 #### 지역별 자치법규
+
 ```bash
 # 서울시 자치법규
 warp ordinance "서울"
@@ -90,6 +95,7 @@ warp interpretation "세법" --size 3
 ## 🔄 통합 검색
 
 ### 모든 소스에서 검색
+
 ```bash
 # 전체 검색
 warp search "개인정보보호"
@@ -102,6 +108,7 @@ warp search "부동산" --format csv > real_estate_laws.csv
 ```
 
 ### 특정 소스 조합
+
 ```bash
 # 법령과 판례만 검색
 warp search "음주운전" --source nlic,prec
@@ -265,11 +272,11 @@ from datetime import datetime, timedelta
 
 def search_laws(query, days_back=30):
     """최근 N일간 개정된 법령 검색"""
-    
+
     # 날짜 계산
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days_back)
-    
+
     # 명령어 실행
     cmd = [
         'warp', 'law', query,
@@ -277,9 +284,9 @@ def search_laws(query, days_back=30):
         '--date-to', end_date.strftime('%Y%m%d'),
         '--format', 'json'
     ]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode == 0:
         data = json.loads(result.stdout)
         return data['items']
@@ -290,12 +297,12 @@ def search_laws(query, days_back=30):
 def main():
     # 최근 30일간 개정된 개인정보 관련 법령
     laws = search_laws("개인정보", days_back=30)
-    
+
     print(f"최근 30일간 개정된 법령: {len(laws)}건")
-    
+
     for law in laws:
         print(f"- {law['title']} ({law['date']})")
-        
+
     # 결과를 JSON 파일로 저장
     with open('recent_laws.json', 'w', encoding='utf-8') as f:
         json.dump(laws, f, ensure_ascii=False, indent=2)
@@ -344,47 +351,47 @@ name: Legal Compliance Check
 
 on:
   schedule:
-    - cron: '0 9 * * 1'  # 매주 월요일 9시
+    - cron: "0 9 * * 1" # 매주 월요일 9시
   workflow_dispatch:
 
 jobs:
   check-laws:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    
-    - name: Install Warp CLI
-      run: cargo install warp
-    
-    - name: Configure API Key
-      run: |
-        warp config init
-        warp config set law.key ${{ secrets.LAW_API_KEY }}
-    
-    - name: Check Privacy Laws
-      run: |
-        warp law "개인정보보호법" --format json > privacy_laws.json
-        
-    - name: Check Recent Changes
-      run: |
-        warp law "개인정보" \
-          --date-from $(date -d '7 days ago' +%Y%m%d) \
-          --date-to $(date +%Y%m%d) \
-          --format markdown > recent_changes.md
-    
-    - name: Upload Results
-      uses: actions/upload-artifact@v2
-      with:
-        name: law-reports
-        path: |
-          privacy_laws.json
-          recent_changes.md
+      - uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install Warp CLI
+        run: cargo install warp
+
+      - name: Configure API Key
+        run: |
+          warp config init
+          warp config set law.key ${{ secrets.LAW_API_KEY }}
+
+      - name: Check Privacy Laws
+        run: |
+          warp law "개인정보보호법" --format json > privacy_laws.json
+
+      - name: Check Recent Changes
+        run: |
+          warp law "개인정보" \
+            --date-from $(date -d '7 days ago' +%Y%m%d) \
+            --date-to $(date +%Y%m%d) \
+            --format markdown > recent_changes.md
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: law-reports
+          path: |
+            privacy_laws.json
+            recent_changes.md
 ```
 
 ### 크론탭 설정 예제
@@ -416,7 +423,7 @@ warp law "개인정보" --format json | \
 warp search "환경" --format json | \
     jq '{
         total: .total,
-        by_source: .items | group_by(.source) | 
+        by_source: .items | group_by(.source) |
         map({source: .[0].source, count: length})
     }'
 ```

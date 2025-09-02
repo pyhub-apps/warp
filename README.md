@@ -5,7 +5,7 @@
 ## ✨ 특징
 
 - 🚀 **고성능**: Rust로 구현되어 빠른 실행 속도와 낮은 메모리 사용량
-- 📚 **5개 법령 API 지원**: 
+- 📚 **5개 법령 API 지원**:
   - 국가법령정보센터 (NLIC)
   - 자치법규정보시스템 (ELIS)
   - 판례 (PREC)
@@ -69,11 +69,13 @@ warp completions fish > ~/.config/fish/completions/warp.fish
 warp completions powershell > warp.ps1
 ```
 
-> **참고**: Windows 명령 프롬프트(CMD)는 자동완성을 지원하지 않습니다. PowerShell 사용을 권장합니다.
+> **참고**: Windows 명령 프롬프트(CMD)는 자동완성을 지원하지 않습니다.
+> PowerShell 사용을 권장합니다.
 
 ## 🚀 빠른 시작
 
 ### 1. API 키 발급
+
 [https://open.law.go.kr](https://open.law.go.kr)에서 무료 API 키를 발급받으세요.
 
 ### 2. API 키 설정
@@ -93,8 +95,8 @@ warp config set law.admrul.key YOUR_ADMRUL_KEY # 행정규칙 전용
 warp config set law.expc.key YOUR_EXPC_KEY   # 법령해석례 전용
 ```
 
-> **참고**: ELIS(자치법규정보시스템)는 별도의 API 키가 필요할 수 있습니다. 
-> API별 키가 설정되지 않은 경우 공통 키(`law.key`)가 자동으로 사용됩니다.
+> **참고**: ELIS(자치법규정보시스템)는 별도의 API 키가 필요할 수 있습니다. API별
+> 키가 설정되지 않은 경우 공통 키(`law.key`)가 자동으로 사용됩니다.
 
 ### 3. 법령 검색
 
@@ -112,11 +114,13 @@ warp search "개인정보보호"
 
 ## 📖 사용법
 
-더 자세한 사용법은 [사용자 가이드](docs/ko/user-guide.md)와 [사용 예제](docs/ko/examples.md)를 참조하세요.
+더 자세한 사용법은 [사용자 가이드](docs/ko/user-guide.md)와
+[사용 예제](docs/ko/examples.md)를 참조하세요.
 
 ### 검색 명령어
 
 #### 법령 검색 (국가법령정보센터)
+
 ```bash
 # 간단한 검색
 warp law "도로교통법"
@@ -132,28 +136,33 @@ warp law history LAW_ID
 ```
 
 #### 자치법규 검색
+
 ```bash
 warp ordinance "서울" --size 10
 warp ordinance detail ORDINANCE_ID
 ```
 
 #### 판례 검색
+
 ```bash
 warp precedent "음주운전" --court "대법원" --date-from 20240101
 warp precedent detail CASE_ID
 ```
 
 #### 행정규칙 검색
+
 ```bash
 warp admrule "개인정보" --department "행정안전부"
 ```
 
 #### 법령해석례 검색
+
 ```bash
 warp interpretation "건축법" --size 5
 ```
 
 #### 통합 검색
+
 ```bash
 # 모든 소스에서 검색
 warp search "개인정보" --source all
@@ -217,7 +226,8 @@ key = "YOUR_API_KEY"  # 공통 API 키
 # ... 기타 API 설정
 ```
 
-> **참고**: 기존 YAML 설정 파일(`config.yaml`)은 자동으로 TOML로 마이그레이션됩니다.
+> **참고**: 기존 YAML 설정 파일(`config.yaml`)은 자동으로 TOML로
+> 마이그레이션됩니다.
 
 ## 🏗️ 프로젝트 구조
 
@@ -323,8 +333,10 @@ cargo build --release --target x86_64-unknown-linux-gnu
 ## 📊 현재 상태
 
 ### ✅ 구현 완료
+
 - 5개 API 클라이언트 (NLIC, ELIS, PREC, ADMRUL, EXPC)
-- 7개 CLI 명령어 (law, ordinance, precedent, admrule, interpretation, search, config)
+- 7개 CLI 명령어 (law, ordinance, precedent, admrule, interpretation, search,
+  config)
 - 6개 출력 형식 (Table, JSON, Markdown, CSV, HTML, HtmlSimple)
 - 통합 검색 (병렬 API 호출)
 - 설정 관리 시스템
@@ -332,12 +344,14 @@ cargo build --release --target x86_64-unknown-linux-gnu
 - 에러 처리 개선
 
 ### 🚧 알려진 이슈
+
 - API 응답이 단일 결과일 때 파싱 에러 (배열/객체 처리)
 - ELIS API는 별도 API 키 필요
 - ADMRUL, EXPC API 일부 검색어 결과 없음
 - 페이지네이션 2페이지 이상 조회 시 결과 없음
 
 ### 📝 개발 예정
+
 - [ ] 국제화 (i18n) 지원
 - [x] Shell 자동완성 (완료 - 자동 감지 포함)
 - [ ] 캐싱 시스템
@@ -371,5 +385,6 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 ## 📞 문의
 
-- GitHub Issues: [https://github.com/pyhub-apps/warp/issues](https://github.com/pyhub-apps/warp/issues)
+- GitHub Issues:
+  [https://github.com/pyhub-apps/warp/issues](https://github.com/pyhub-apps/warp/issues)
 - Email: pyhub.kr@gmail.com

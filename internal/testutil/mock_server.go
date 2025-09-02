@@ -175,7 +175,7 @@ func (ms *MockServer) GetURL() string {
 // GetSearchURL returns the search endpoint URL for the given API type
 func (ms *MockServer) GetSearchURL(apiType string) string {
 	u, _ := url.Parse(ms.Server.URL)
-	
+
 	// Set path based on API type
 	switch apiType {
 	case "nlic":
@@ -191,7 +191,7 @@ func (ms *MockServer) GetSearchURL(apiType string) string {
 	default:
 		u.Path = "/DRF/lawSearch.do"
 	}
-	
+
 	return u.String()
 }
 

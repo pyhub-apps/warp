@@ -48,7 +48,7 @@ get_build_number() {
             # Linux
             WEEK_START=$(date -d "last monday" +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d)
         fi
-        
+
         # Count commits since week start
         BUILD=$(git rev-list --count --since="$WEEK_START" HEAD 2>/dev/null || echo "0")
         echo "$BUILD"
@@ -71,7 +71,7 @@ Options:
     --set-head VERSION  Set the head version
     --bump-head         Increment the head version by 1
     --format FORMAT     Output in specific format (full|short|json)
-    
+
 Without options, outputs the full version string.
 
 Examples:
@@ -91,19 +91,19 @@ More info: https://github.com/line/headver
 EOF
         exit 0
         ;;
-    
+
     --head)
         get_head_version
         ;;
-    
+
     --yearweek)
         get_yearweek
         ;;
-    
+
     --build)
         get_build_number
         ;;
-    
+
     --set-head)
         if [ -z "$2" ]; then
             echo "Error: --set-head requires a version number" >&2
@@ -113,20 +113,20 @@ EOF
         echo "$2" > "$HEAD_VERSION_FILE"
         echo "Head version set to $2"
         ;;
-    
+
     --bump-head)
         CURRENT_HEAD=$(get_head_version)
         NEW_HEAD=$((CURRENT_HEAD + 1))
         echo "$NEW_HEAD" > "$HEAD_VERSION_FILE"
         echo "Head version bumped from $CURRENT_HEAD to $NEW_HEAD"
         ;;
-    
+
     --format)
         HEAD=$(get_head_version)
         YEARWEEK=$(get_yearweek)
         BUILD=$(get_build_number)
         VERSION="${HEAD}.${YEARWEEK}.${BUILD}"
-        
+
         case "$2" in
             json)
                 printf '{"head":"%s","yearweek":"%s","build":"%s","version":"%s"}\n' \
@@ -140,7 +140,7 @@ EOF
                 ;;
         esac
         ;;
-    
+
     *)
         # Default: output full version
         HEAD=$(get_head_version)

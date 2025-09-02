@@ -104,8 +104,8 @@ mod tests {
     async fn test_custom_client_creation() {
         let client = create_custom_client(10, "test-agent/1.0");
         // Should not panic and should create a working client
-        let request = client.get("https://httpbin.org/get");
+        let _request = client.get("https://httpbin.org/get");
         // Just test that the client was created successfully
-        assert!(std::ptr::addr_of!(client) != std::ptr::null());
+        assert!(!std::ptr::addr_of!(client).is_null());
     }
 }

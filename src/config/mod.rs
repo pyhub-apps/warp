@@ -446,7 +446,7 @@ mod tests {
     fn test_cache_config_defaults() {
         let config = CacheConfig::default();
 
-        assert_eq!(config.enabled, true);
+        assert!(config.enabled);
         assert_eq!(config.ttl_seconds, 86400);
         assert_eq!(config.max_size_mb, 100);
         // cache_dir should be None when using default_cache_dir function in TOML
