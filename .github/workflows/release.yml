@@ -253,6 +253,7 @@ jobs:
           gh release upload ${{ needs.create-release.outputs.version }} \
             ./warp-${{ matrix.target }}.${{ matrix.archive }} \
             --clobber
+        shell: bash
 
   checksums:
     name: Generate Checksums
@@ -289,6 +290,7 @@ jobs:
           gh release upload ${{ needs.create-release.outputs.version }} \
             ./checksums.txt \
             --clobber
+        shell: bash
 
   create-install-script:
     name: Create Install Script
@@ -360,3 +362,4 @@ jobs:
           gh release upload ${{ needs.create-release.outputs.version }} \
             ./install.sh \
             --clobber
+        shell: bash
