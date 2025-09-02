@@ -45,7 +45,7 @@ warp law "민법"
 ## 📮 도움이 필요하신가요?
 
 - **버그 리포트**: [GitHub Issues](https://github.com/pyhub-apps/warp/issues)
-- **이메일**: pyhub.kr@gmail.com
+- **이메일**: me@pyhub.kr
 
 ## 🤝 기여하기
 

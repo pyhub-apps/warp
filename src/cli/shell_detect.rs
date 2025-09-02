@@ -1,4 +1,5 @@
 use clap_complete::Shell;
+use rust_i18n::t;
 use std::env;
 use std::path::Path;
 
@@ -155,24 +156,25 @@ fn detect_from_parent_process() -> Option<DetectedShell> {
 pub fn confirm_shell_selection(shell: &DetectedShell) -> bool {
     use std::io::{self, Write};
 
-    println!("🔍 현재 셸 감지: {}", shell.display_name());
+    println!("🔍 {}: {}", t!("shell_completions.detected"), shell.display_name());
 
     match shell {
         DetectedShell::WindowsCmd => {
-            println!("⚠️  Windows 명령 프롬프트(CMD)는 자동완성을 지원하지 않습니다.");
-            println!("   PowerShell 사용을 권장합니다.");
+            println!("⚠️  {}.", t!("shell_completions.cmd_warning"));
+            println!("   {}.", t!("shell_completions.powershell_recommend"));
             println!();
-            print!("PowerShell용 자동완성을 생성하시겠습니까? (y/n): ");
+            print!("{} (y/n): ", t!("shell_completions.generate_powershell"));
         }
         DetectedShell::Supported(_s) => {
             print!(
-                "{}용 자동완성을 생성하시겠습니까? (y/n): ",
-                shell.display_name()
+                "{}{} (y/n): ",
+                shell.display_name(),
+                t!("shell_completions.generate_for")
             );
         }
         DetectedShell::Unknown(name) => {
-            println!("⚠️  알 수 없는 셸: {}", name);
-            println!("   수동으로 셸을 선택해주세요:");
+            println!("⚠️  {}: {}", t!("shell_completions.unknown_shell"), name);
+            println!("   {}:", t!("shell_completions.select_manually"));
             println!("   warp completions bash");
             println!("   warp completions zsh");
             println!("   warp completions fish");

@@ -350,7 +350,7 @@ uname -a  # 운영체제 정보
    - 재현 단계
 
 3. **커뮤니티 지원**
-   - Email: pyhub.kr@gmail.com
+   - Email: me@pyhub.kr
    - GitHub Discussions (준비 중)
 
 ## 📚 관련 문서

@@ -1,0 +1,110 @@
+# CLI Help Messages - English
+
+about: "Korean Legal Information CLI - Search laws, ordinances, and legal documents from the terminal"
+
+commands:
+  law: "Search and view laws (국가법령)"
+  ordinance: "Search and view local ordinances (자치법규)"
+  precedent: "Search precedents (판례)"
+  admrule: "Search administrative rules (행정규칙)"
+  interpretation: "Search legal interpretations (법령해석례)"
+  search: "Unified search across all sources"
+  config: "Manage configuration"
+  cache: "Manage cache"
+  version: "Show version information"
+  completions: "Generate shell completion scripts"
+
+subcommands:
+  # Law subcommands
+  law_search: "Search for laws"
+  law_detail: "Get law details"
+  law_history: "Get law history"
+
+  # Ordinance subcommands
+  ordinance_search: "Search for ordinances"
+  ordinance_detail: "Get ordinance details"
+
+  # Precedent subcommands
+  precedent_search: "Search for precedents"
+  precedent_detail: "Get precedent details"
+
+  # Cache subcommands
+  cache_status: "Show cache status and statistics"
+  cache_clear: "Clear all cached data"
+  cache_config: "Show cache configuration"
+  cache_enable: "Enable cache"
+  cache_disable: "Disable cache"
+
+  # Config subcommands
+  config_set: "Set a configuration value"
+  config_get: "Get a configuration value"
+  config_path: "Show configuration file path"
+  config_init: "Initialize configuration"
+
+options:
+  verbose: "Enable verbose output"
+  quiet: "Disable progress indicators"
+  no_cache: "Disable cache for this operation"
+  format: "Output format"
+  page: "Page number"
+  size: "Results per page"
+  law_type: "Law type filter"
+  department: "Department filter"
+  region: "Region filter"
+  court: "Court filter"
+  case_type: "Case type filter"
+  date_from: "Date from (YYYYMMDD)"
+  date_to: "Date to (YYYYMMDD)"
+  source: "Source to search (nlic, elis, all)"
+  force: "Force clear without confirmation"
+  api: "Clear only specific API cache (nlic, elis, prec, admrul, expc)"
+  key: "Configuration key (e.g., law.key)"
+  value: "Configuration value"
+  shell: "The shell to generate completions for (auto-detect if not specified)"
+
+arguments:
+  query: "Search query"
+  law_query: "Search query (can be used directly without subcommand)"
+  ordinance_query: "Search query (can be used directly without subcommand)"
+  precedent_query: "Search query (can be used directly without subcommand)"
+  admrule_query: "Search query"
+  interpretation_query: "Search query"
+  search_query: "Search query"
+  law_id: "Law ID"
+  ordinance_id: "Ordinance ID"
+  precedent_id: "Precedent ID"
+  config_key: "Configuration key"
+
+formats:
+  table: "Table format (default)"
+  json: "JSON format"
+  markdown: "Markdown format"
+  csv: "CSV format"
+  html: "HTML format"
+  html_simple: "Simple HTML format"
+
+# Error messages and hints
+verbose_hint: "Use --verbose option for more detailed information"
+
+# Custom help messages
+help:
+  usage: "Usage"
+  commands: "Commands"
+  options: "Options"
+  global_options: "Global Options"
+  examples: "Examples"
+
+shell_completions:
+  detected: "Current shell detected"
+  cmd_warning: "Windows Command Prompt (CMD) does not support completions."
+  powershell_recommend: "PowerShell is recommended."
+  generate_powershell: "Generate completions for PowerShell?"
+  generate_for: "Generate completions for"
+  unknown_shell: "Unknown shell"
+  select_manually: "Please manually select a shell:"
+  confirm: "Generate completions for this shell?"
+  cancelled: "Completion generation cancelled"
+  manual_generation: "You can manually generate completions with"
+  unable_to_detect: "Unable to detect current shell"
+  unable_to_generate: "Unable to generate completions for the detected shell"
+  specify_manually: "Please specify a shell"

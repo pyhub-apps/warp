@@ -284,7 +284,7 @@ cargo install warp --force
 
 - **GitHub Issues**:
   [https://github.com/pyhub-apps/warp/issues](https://github.com/pyhub-apps/warp/issues)
-- **이메일**: pyhub.kr@gmail.com
+- **이메일**: me@pyhub.kr
 
 ## 📖 관련 문서
 

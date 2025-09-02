@@ -1,0 +1,58 @@
+WARP CLI PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) 2025 PyHub Community. All Rights Reserved.
+
+This software and associated documentation files (the "Software") are proprietary
+and confidential commercial software. Unauthorized copying, modification,
+distribution, or use of this Software, via any medium, is strictly prohibited
+without a valid commercial license.
+
+GRANT OF LICENSE:
+Subject to the terms and conditions of this Agreement and payment of applicable
+license fees, PyHub Community grants licensee a limited, non-exclusive,
+non-transferable license to use the Software in accordance with the purchased
+license type.
+
+RESTRICTIONS:
+You may NOT:
+- Copy, modify, or distribute the Software or any portion thereof
+- Reverse engineer, decompile, disassemble, or attempt to derive the source code
+- Remove, alter, or obscure any proprietary notices or labels
+- Create derivative works based on the Software
+- Use the Software for any commercial purpose without a valid commercial license
+- Transfer, rent, lease, loan, or sublicense the Software to any third party
+- Use the Software in any manner that violates applicable laws or regulations
+
+LICENSE TYPES:
+- Personal License: Single user, non-commercial use
+- Team License: Up to 10 users within single organization
+- Enterprise License: Unlimited users within single organization
+
+INTELLECTUAL PROPERTY:
+The Software contains proprietary and confidential information of PyHub Community
+and its suppliers. All intellectual property rights in and to the Software are
+owned by PyHub Community and protected by copyright and other intellectual property laws.
+
+TERMINATION:
+This license is effective until terminated. Your license will terminate immediately
+without notice if you breach any provision of this Agreement. Upon termination,
+you must cease all use and destroy all copies of the Software.
+
+DISCLAIMER OF WARRANTY:
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+LIMITATION OF LIABILITY:
+IN NO EVENT SHALL PYHUB COMMUNITY BE LIABLE FOR ANY DAMAGES WHATSOEVER ARISING
+OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE.
+
+GOVERNING LAW:
+This Agreement shall be governed by and construed in accordance with the laws
+of the Republic of Korea, without regard to conflict of law principles.
+
+For licensing inquiries and commercial use:
+Email: me@pyhub.kr
+Web: https://github.com/pyhub-apps/warp
+
+Last updated: January 2025

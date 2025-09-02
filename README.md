@@ -33,10 +33,15 @@
 ### 빠른 설치
 
 ```bash
-# Cargo를 통한 설치 (준비 중)
-cargo install warp
+# 라이센스 구매 후 정식 버전 다운로드
+# 구매 문의: me@pyhub.kr
 
-# 또는 소스에서 빌드
+# 평가판 다운로드 (30일 제한)
+wget https://github.com/pyhub-apps/warp/releases/latest/download/warp-trial.tar.gz
+tar -xzf warp-trial.tar.gz
+cd warp-trial
+
+# 또는 라이센스 구매자는 소스에서 빌드 가능
 git clone https://github.com/pyhub-apps/warp.git
 cd warp
 cargo build --release
@@ -369,9 +374,40 @@ cargo build --release --target x86_64-unknown-linux-gnu
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 라이선스
+## 📄 라이선스 및 구매
 
-MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+**WARP CLI는 상업용 소프트웨어입니다.** 사용하려면 유효한 라이센스가 필요합니다.
+
+### 💳 라이센스 유형 및 가격
+
+| 라이센스 | 가격 | 사용자 수 | 지원 |
+|---------|------|-----------|------|
+| **Personal** | ₩99,000/년 | 1명 (개인) | 이메일 지원 |
+| **Team** | ₩490,000/년 | 최대 10명 | 우선 지원 |
+| **Enterprise** | 문의 | 무제한 | 전담 지원 |
+
+### 📋 평가판
+
+30일 무료 평가판을 제공합니다. 평가판 다운로드:
+
+```bash
+# 평가판 다운로드 (30일 제한)
+wget https://github.com/pyhub-apps/warp/releases/latest/download/warp-trial.tar.gz
+```
+
+### 📞 라이센스 구매 문의
+
+- **이메일**: me@pyhub.kr
+- **기술지원**: me@pyhub.kr
+- **웹사이트**: https://github.com/pyhub-apps/warp
+
+### 📜 라이센스 조건
+
+본 소프트웨어는 독점 상업용 라이센스로 보호됩니다. 자세한 내용은 다음을 참조하세요:
+- [LICENSE](LICENSE) - 라이센스 전문
+- [EULA.md](EULA.md) - 최종 사용자 라이센스 동의서
+
+**⚠️ 중요**: 유효한 라이센스 없이 사용 시 저작권법 위반이 될 수 있습니다.
 
 ## 🔗 관련 프로젝트
 
@@ -387,4 +423,4 @@ MIT License - 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
 - GitHub Issues:
   [https://github.com/pyhub-apps/warp/issues](https://github.com/pyhub-apps/warp/issues)
-- Email: pyhub.kr@gmail.com
+- Email: me@pyhub.kr

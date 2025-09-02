@@ -4,6 +4,7 @@ pub mod shell_detect;
 
 use clap::{Parser, Subcommand};
 use clap_complete::Shell;
+use rust_i18n::t;
 
 /// Korean Legal Information CLI
 #[derive(Parser, Debug)]
@@ -30,6 +31,10 @@ pub struct Cli {
     /// Output format
     #[arg(short, long, global = true, value_enum, default_value = "table")]
     pub format: OutputFormat,
+
+    /// Set language (ko, en)
+    #[arg(long, global = true)]
+    pub lang: Option<String>,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -93,9 +98,31 @@ pub enum Commands {
         #[arg(value_enum)]
         shell: Option<Shell>,
     },
+
+    /// Show localized help information
+    #[command(hide = true)]
+    LocalizedHelp,
 }
 
 impl Cli {
+    /// Initialize i18n locale
+    fn init_locale(lang: Option<String>) {
+        // Priority: 1. Explicit --lang flag, 2. LANG environment variable, 3. System locale
+        let locale = lang.clone()
+            .or_else(|| std::env::var("LANG").ok())
+            .or_else(|| sys_locale::get_locale())
+            .unwrap_or_else(|| "en".to_string());
+
+        let normalized_locale = if locale.starts_with("ko") {
+            "ko"
+        } else {
+            "en"
+        };
+
+
+        rust_i18n::set_locale(normalized_locale);
+    }
+
     /// Generate shell completion scripts
     fn generate_completions(shell: Shell) {
         use clap::CommandFactory;
@@ -110,6 +137,9 @@ impl Cli {
     /// Run the CLI application
     pub async fn run() -> crate::error::Result<()> {
         let cli = Self::parse();
+
+        // Initialize locale
+        Self::init_locale(cli.lang.clone());
 
         // Set up logging
         if cli.verbose {
@@ -156,6 +186,10 @@ impl Cli {
                 commands::version::execute();
                 Ok(())
             }
+            Commands::LocalizedHelp => {
+                commands::help::execute();
+                Ok(())
+            }
             Commands::Completions { shell } => {
                 use shell_detect::{
                     confirm_shell_selection, detect_current_shell, get_completion_shell,
@@ -174,8 +208,8 @@ impl Cli {
                                 match get_completion_shell(&detected) {
                                     Some(s) => s,
                                     None => {
-                                        eprintln!("Unable to generate completions for the detected shell.");
-                                        eprintln!("Please specify a shell manually:");
+                                        eprintln!("{}", t!("shell_completions.unable_to_generate"));
+                                        eprintln!("{}:", t!("shell_completions.specify_manually"));
                                         eprintln!("  warp completions bash");
                                         eprintln!("  warp completions zsh");
                                         eprintln!("  warp completions fish");
@@ -185,8 +219,8 @@ impl Cli {
                                 }
                             } else {
                                 // User declined
-                                eprintln!("\nCompletion generation cancelled.");
-                                eprintln!("You can manually generate completions with:");
+                                eprintln!("\n{}.", t!("shell_completions.cancelled"));
+                                eprintln!("{}:", t!("shell_completions.manual_generation"));
                                 eprintln!("  warp completions bash");
                                 eprintln!("  warp completions zsh");
                                 eprintln!("  warp completions fish");
@@ -195,8 +229,8 @@ impl Cli {
                             }
                         }
                         None => {
-                            eprintln!("Unable to detect current shell.");
-                            eprintln!("Please specify a shell:");
+                            eprintln!("{}.", t!("shell_completions.unable_to_detect"));
+                            eprintln!("{}:", t!("shell_completions.specify_manually"));
                             eprintln!("  warp completions bash");
                             eprintln!("  warp completions zsh");
                             eprintln!("  warp completions fish");
@@ -229,7 +263,7 @@ impl Cli {
                 match &e {
                     WarpError::Parse(_) | WarpError::ApiError { .. } => {
                         if !cli.verbose {
-                            eprintln!("\n💡 더 자세한 정보를 보려면 --verbose 옵션을 사용하세요");
+                            eprintln!("\n💡 {}", t!("verbose_hint"));
                         }
                     }
                     _ => {}
