@@ -267,6 +267,13 @@ pub struct CacheArgs {
     pub command: CacheCommand,
 }
 
+/// Performance metrics command arguments
+#[derive(Args, Debug)]
+pub struct MetricsArgs {
+    #[command(subcommand)]
+    pub command: MetricsCommand,
+}
+
 #[derive(Subcommand, Debug)]
 pub enum CacheCommand {
     /// Show cache status and statistics
@@ -315,4 +322,108 @@ pub enum ConfigCommand {
 
     /// Initialize configuration
     Init,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum MetricsCommand {
+    /// Show current performance metrics dashboard
+    Show {
+        /// Time window for metrics aggregation
+        #[arg(long, default_value = "5m", help = "Time window: 1m, 5m, 15m, 1h, 24h")]
+        window: String,
+
+        /// Show detailed metrics including percentiles and error analysis
+        #[arg(long, help = "Display detailed metrics and analysis")]
+        details: bool,
+
+        /// Refresh interval for continuous monitoring
+        #[arg(long, help = "Auto-refresh interval (e.g., 5s, 1m)")]
+        refresh: Option<String>,
+    },
+
+    /// Show performance dashboard (alias for show)
+    Dashboard {
+        /// Time window for metrics aggregation
+        #[arg(long, default_value = "5m", help = "Time window: 1m, 5m, 15m, 1h, 24h")]
+        window: String,
+
+        /// Show detailed metrics
+        #[arg(long, help = "Display detailed metrics and analysis")]
+        details: bool,
+
+        /// Refresh interval for continuous monitoring
+        #[arg(long, help = "Auto-refresh interval (e.g., 5s, 1m)")]
+        refresh: Option<String>,
+    },
+
+    /// Show historical performance data
+    History {
+        /// Number of hours to look back
+        #[arg(long, help = "Hours of history to show")]
+        hours: Option<u32>,
+
+        /// Number of days to look back
+        #[arg(long, help = "Days of history to show")]
+        days: Option<u32>,
+
+        /// Filter by specific API (nlic, elis, prec, admrul, expc)
+        #[arg(long, help = "Filter by API type")]
+        api: Option<String>,
+    },
+
+    /// Show cache performance metrics
+    Cache,
+
+    /// Show connection pool status
+    Pools,
+
+    /// Show detailed latency analysis with percentiles
+    Latency {
+        /// Percentiles to display (comma-separated)
+        #[arg(
+            long,
+            default_value = "50,90,95,99",
+            help = "Percentiles to show (e.g., 50,90,95,99)"
+        )]
+        percentiles: String,
+    },
+
+    /// Generate performance report
+    Report {
+        /// Start date for report (YYYY-MM-DD)
+        #[arg(long, help = "Report start date")]
+        from: Option<String>,
+
+        /// End date for report (YYYY-MM-DD)
+        #[arg(long, help = "Report end date")]
+        to: Option<String>,
+
+        /// Report output format (text, json, csv)
+        #[arg(long, default_value = "text", help = "Report output format")]
+        output_format: String,
+    },
+
+    /// Reset all metrics data
+    Reset {
+        /// Force reset without confirmation
+        #[arg(long, help = "Force reset without confirmation")]
+        force: bool,
+    },
+
+    /// Enable metrics collection
+    Enable,
+
+    /// Disable metrics collection
+    Disable,
+
+    /// Clean up old metrics data
+    Cleanup {
+        /// Remove data older than specified days
+        #[arg(long, default_value = "30", help = "Remove data older than N days")]
+        older_than: u32,
+
+        /// Force cleanup without confirmation
+        #[arg(long, help = "Force cleanup without confirmation")]
+        force: bool,
+    },
 }

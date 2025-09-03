@@ -3044,7 +3044,7 @@ dependencies = [
 
 [[package]]
 name = "warp"
-version = "2.2536.26"
+version = "2.2536.34"
 dependencies = [
  "anyhow",
  "async-trait",

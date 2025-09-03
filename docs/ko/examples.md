@@ -49,6 +49,104 @@ time warp search --parallel "민법"
 time warp search --parallel --batch --cache-tier 2 "민법"
 ```
 
+## 📊 성능 메트릭스 모니터링
+
+새로 추가된 메트릭스 시스템으로 Warp CLI의 성능을 실시간으로 모니터링할 수
+있습니다.
+
+### 실시간 성능 대시보드
+
+```bash
+# 기본 성능 대시보드 표시
+warp metrics show
+
+# 상세한 성능 분석 포함
+warp metrics show --details
+
+# 실시간 모니터링 (5초마다 갱신)
+warp metrics show --refresh 5s
+
+# 1분 간격 모니터링
+warp metrics show --refresh 1m
+
+# 특정 시간 범위의 메트릭스
+warp metrics show --window 1h --details
+```
+
+### 캐시 및 연결 풀 모니터링
+
+```bash
+# 캐시 성능 확인
+warp metrics cache
+
+# 연결 풀 상태 확인
+warp metrics pools
+
+# 지연시간 분석 (백분위수 포함)
+warp metrics latency --percentiles 50,90,95,99
+```
+
+### 히스토리 및 리포트
+
+```bash
+# 최근 24시간 성능 히스토리
+warp metrics history --hours 24
+
+# 최근 7일 성능 트렌드
+warp metrics history --days 7
+
+# 특정 API 성능 분석
+warp metrics history --api nlic --days 3
+
+# JSON 형식 성능 리포트
+warp metrics report --format json
+
+# CSV 형식으로 내보내기
+warp metrics report --format csv > performance_report.csv
+```
+
+### 메트릭스 관리
+
+```bash
+# 메트릭스 데이터 초기화
+warp metrics reset --force
+
+# 30일 이전 데이터 정리
+warp metrics cleanup --older-than 30
+
+# 메트릭스 수집 비활성화
+warp metrics disable
+```
+
+### 예상 출력 예시
+
+```
+📊 Performance Dashboard
+────────────────────────────────────────────────────────────
+🖥️  System Overview
+   Uptime: 2h 15m 30s
+   Memory: 45.2 MB
+   Window: Last5Minutes
+
+🔄 API Operations
+   Total Requests: 1,247
+   Success Rate: 98.4% ✅
+   Top Operations:
+     • nlic_search (456 req, 201ms avg, 99.1%)
+     • elis_search (321 req, 289ms avg, 97.8%)
+     • prec_search (234 req, 312ms avg, 96.2%)
+
+💾 Cache Performance
+   nlic: 72.1% hit rate (328 hits, 128 misses)
+     Storage: 12.4 MB (1,247 entries)
+   elis: 61.4% hit rate (197 hits, 124 misses)
+     Storage: 8.7 MB (891 entries)
+
+🔗 Connection Pools
+   nlic_pool: 40.0% utilization (8/20 active)
+   elis_pool: 25.0% utilization (5/20 active)
+```
+
 ## 📚 기본 사용 예제
 
 ### 법령 검색 및 조회

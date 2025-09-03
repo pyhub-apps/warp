@@ -89,6 +89,10 @@ pub enum Commands {
     /// Manage cache
     Cache(args::CacheArgs),
 
+    /// Performance metrics and monitoring
+    #[command(alias = "m")]
+    Metrics(args::MetricsArgs),
+
     /// Show version information
     Version,
 
@@ -178,6 +182,9 @@ impl Cli {
             }
             Commands::Config(args) => commands::config::execute(args).await,
             Commands::Cache(args) => commands::cache::execute(args).await,
+            Commands::Metrics(args) => {
+                commands::metrics::execute(args, cli.format, cli.quiet, cli.verbose).await
+            }
             Commands::Version => {
                 commands::version::execute();
                 Ok(())

@@ -4,6 +4,7 @@ pub mod config;
 pub mod help;
 pub mod interpretation;
 pub mod law;
+pub mod metrics;
 pub mod ordinance;
 pub mod precedent;
 pub mod search;
