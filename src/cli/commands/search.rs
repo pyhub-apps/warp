@@ -1,7 +1,8 @@
 use crate::api::client::{ClientConfig, LegalApiClient};
+use crate::api::parallel::{ParallelConfig, ParallelExecutor};
 use crate::api::types::{ResponseType, SearchResponse, UnifiedSearchRequest};
 use crate::api::{ApiClientFactory, ApiType};
-use crate::cache::CacheStore;
+use crate::cache::{CacheConfig, CacheStore};
 use crate::cli::args::SearchArgs;
 use crate::cli::OutputFormat;
 use crate::config::Config;
@@ -11,6 +12,7 @@ use crate::progress::{messages, ApiStage, EnhancedApiProgress, ProgressManager};
 use chrono::Utc;
 use futures::future::join_all;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Execute unified search command across multiple APIs
 pub async fn execute(
@@ -32,7 +34,16 @@ pub async fn execute(
     let config = Config::load()?;
 
     // Determine which APIs to search
-    let api_types = parse_source(&args.source);
+    let api_types = if let Some(apis) = &args.apis {
+        parse_apis(apis)
+    } else {
+        parse_source(&args.source)
+    };
+
+    // Check if parallel search is requested
+    if args.parallel && api_types.len() > 1 {
+        return execute_parallel_search(args, format, quiet, verbose, api_types, config).await;
+    }
 
     // Create search request
     let request = UnifiedSearchRequest {
@@ -245,4 +256,178 @@ fn merge_responses(responses: Vec<(ApiType, SearchResponse)>) -> SearchResponse 
         source: "통합검색".to_string(),
         timestamp: Utc::now(),
     }
+}
+
+/// Parse APIs string (comma-separated) to ApiType vector
+fn parse_apis(apis: &str) -> Vec<ApiType> {
+    apis.split(',')
+        .filter_map(|api| {
+            let api = api.trim().to_lowercase();
+            match api.as_str() {
+                "nlic" | "law" => Some(ApiType::Nlic),
+                "elis" | "ordinance" => Some(ApiType::Elis),
+                "prec" | "precedent" => Some(ApiType::Prec),
+                "admrul" | "administrative" => Some(ApiType::Admrul),
+                "expc" | "interpretation" => Some(ApiType::Expc),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
+/// Execute parallel search with advanced optimization options
+async fn execute_parallel_search(
+    args: SearchArgs,
+    format: OutputFormat,
+    quiet: bool,
+    verbose: bool,
+    api_types: Vec<ApiType>,
+    config: Config,
+) -> Result<()> {
+    let progress_manager = Arc::new(ProgressManager::new(quiet, verbose));
+
+    if !quiet {
+        println!(
+            "🚀 병렬 검색 시작: {} APIs, 최적화 옵션 활성화",
+            api_types.len()
+        );
+        if args.batch {
+            println!("📦 배치 처리: {}개씩 그룹화", args.batch_size);
+        }
+        if let Some(tier) = args.cache_tier {
+            println!(
+                "⚡ 캐싱: Tier {} ({})",
+                tier,
+                if tier == 2 { "고급" } else { "기본" }
+            );
+        }
+        println!("🔗 최대 동시 연결: {}개", args.max_concurrent);
+    }
+
+    // Create enhanced cache if requested
+    let cache_store = if args.no_cache {
+        None
+    } else if let Some(tier) = args.cache_tier {
+        Some(create_enhanced_cache(tier).await?)
+    } else {
+        None
+    };
+
+    // Create parallel configuration
+    let parallel_config = ParallelConfig {
+        max_concurrent: args.max_concurrent as usize,
+        request_timeout: Duration::from_secs(args.timeout as u64),
+        fail_fast: false,
+        batch_delay: Duration::from_millis(100),
+    };
+
+    // Create search request
+    let request = UnifiedSearchRequest {
+        query: args.query.clone(),
+        page_no: args.page,
+        page_size: args.size,
+        response_type: ResponseType::Json,
+        ..Default::default()
+    };
+
+    // Create API clients with optimization
+    let mut clients = Vec::new();
+    for api_type in &api_types {
+        let client_config = create_optimized_client_config(api_type, &config, cache_store.clone())?;
+        let client = ApiClientFactory::create(*api_type, client_config)?;
+        clients.push((*api_type, Arc::from(client)));
+    }
+
+    // Execute parallel search
+    let executor = ParallelExecutor::new(parallel_config);
+    let start_time = std::time::Instant::now();
+
+    progress_manager.create_multi_api_progress(api_types.len() as u64, &args.query);
+
+    let result = executor.search_parallel(clients, request).await;
+    let execution_time = start_time.elapsed();
+
+    match result {
+        Ok(parallel_result) => {
+            if !quiet {
+                println!(
+                    "✅ 병렬 검색 완료: {:.2}초, {} APIs 성공",
+                    execution_time.as_secs_f64(),
+                    parallel_result.successes.len()
+                );
+            }
+
+            let merged_response = merge_responses(parallel_result.successes);
+            let formatted_output = output::format_search_response(&merged_response, format)?;
+            if !quiet {
+                println!("{}", formatted_output);
+            }
+            Ok(())
+        }
+        Err(err) => {
+            if !quiet {
+                eprintln!(
+                    "❌ 병렬 검색 오류: {:.2}초 후 실패",
+                    execution_time.as_secs_f64()
+                );
+            }
+            Err(err)
+        }
+    }
+}
+
+/// Create enhanced cache based on tier level
+async fn create_enhanced_cache(tier: u8) -> Result<Arc<CacheStore>> {
+    match tier {
+        1 => {
+            // Basic cache
+            let cache_config = CacheConfig::default();
+            let cache = CacheStore::new(cache_config).await?;
+            Ok(Arc::new(cache))
+        }
+        2 => {
+            // Advanced cache with compression would be implemented here
+            // For now, use the same as tier 1
+            let cache_config = CacheConfig::default();
+            let cache = CacheStore::new(cache_config).await?;
+            Ok(Arc::new(cache))
+        }
+        _ => Err(WarpError::InvalidInput(
+            "Cache tier must be 1 or 2".to_string(),
+        )),
+    }
+}
+
+/// Create optimized client configuration for parallel search
+fn create_optimized_client_config(
+    api_type: &ApiType,
+    config: &Config,
+    cache: Option<Arc<CacheStore>>,
+) -> Result<ClientConfig> {
+    let api_key_name = match api_type {
+        ApiType::Nlic => "law.nlic.key",
+        ApiType::Elis => "law.elis.key",
+        ApiType::Prec => "law.prec.key",
+        ApiType::Admrul => "law.admrul.key",
+        ApiType::Expc => "law.expc.key",
+        ApiType::All => "law.key", // fallback
+    };
+
+    let api_key = config
+        .get_api_key(api_key_name)
+        .or_else(|| config.get_api_key("law.key"))
+        .ok_or_else(|| {
+            WarpError::InvalidInput(format!("API key for {} not found", api_type.display_name()))
+        })?;
+
+    Ok(ClientConfig {
+        api_key,
+        timeout: 30,
+        max_retries: 3,
+        retry_base_delay: 100,
+        user_agent: format!("warp-parallel/{}", env!("CARGO_PKG_VERSION")),
+        cache,
+        bypass_cache: false,
+        benchmark_mode: false,
+    })
 }

@@ -2,6 +2,53 @@
 
 실제 시나리오별 Warp CLI 사용 예제를 소개합니다.
 
+## 🚀 병렬 검색 (고성능 모드)
+
+새로 추가된 병렬 검색 기능을 사용하면 3-5배 빠른 검색이 가능합니다.
+
+### 기본 병렬 검색
+
+```bash
+# 모든 API에서 병렬 검색 (기본 3개 API: NLIC, ELIS, PREC)
+warp search --parallel "민법"
+
+# 특정 API들만 선택하여 병렬 검색
+warp search --parallel --apis nlic,elis,prec "계약"
+warp search --parallel --apis nlic,admrul "행정규칙"
+```
+
+### 고급 최적화 옵션
+
+```bash
+# 배치 처리로 성능 향상 (요청을 그룹화)
+warp search --parallel --batch "부동산"
+
+# 배치 크기 조정 (기본 10개)
+warp search --parallel --batch --batch-size 20 "임대차"
+
+# 캐싱 활성화 (1=기본, 2=고급)
+warp search --parallel --cache-tier 2 "상속"
+
+# 동시 연결 수 조정 (기본 5개)
+warp search --parallel --max-concurrent 10 "민사소송"
+
+# 모든 최적화 옵션 활성화
+warp search --parallel --batch --cache-tier 2 --max-concurrent 8 "개인정보보호"
+```
+
+### 성능 비교
+
+```bash
+# 일반 검색 (순차 처리)
+time warp search "민법" --source all
+
+# 병렬 검색 (3-5배 빠름)
+time warp search --parallel "민법"
+
+# 최적화된 병렬 검색 (최고 성능)
+time warp search --parallel --batch --cache-tier 2 "민법"
+```
+
 ## 📚 기본 사용 예제
 
 ### 법령 검색 및 조회

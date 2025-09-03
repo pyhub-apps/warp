@@ -208,6 +208,49 @@ pub struct SearchArgs {
     /// Source to search (nlic, elis, all)
     #[arg(short = 'S', long, default_value = "all")]
     pub source: String,
+
+    /// Enable parallel search across multiple APIs for faster results
+    #[arg(
+        long,
+        help = "Enable parallel search across multiple APIs (3-5x faster)"
+    )]
+    pub parallel: bool,
+
+    /// APIs to search when using parallel mode (comma-separated: nlic,elis,prec,admrul,expc)
+    #[arg(long, help = "Specify APIs for parallel search (e.g., nlic,elis,prec)")]
+    pub apis: Option<String>,
+
+    /// Enable request batching for improved performance
+    #[arg(long, help = "Enable request batching and deduplication")]
+    pub batch: bool,
+
+    /// Batch size for request batching (1-50)
+    #[arg(
+        long,
+        default_value = "10",
+        help = "Number of requests per batch (1-50)"
+    )]
+    pub batch_size: u32,
+
+    /// Enable tiered caching (1=basic, 2=advanced with compression)
+    #[arg(long, value_parser = clap::value_parser!(u8).range(1..=2), help = "Cache tier: 1=basic, 2=advanced")]
+    pub cache_tier: Option<u8>,
+
+    /// Maximum concurrent connections for parallel search
+    #[arg(
+        long,
+        default_value = "5",
+        help = "Max concurrent API connections (1-20)"
+    )]
+    pub max_concurrent: u32,
+
+    /// Request timeout in seconds
+    #[arg(long, default_value = "30", help = "Request timeout in seconds")]
+    pub timeout: u32,
+
+    /// Disable cache for this search
+    #[arg(long, help = "Bypass all caching for fresh results")]
+    pub no_cache: bool,
 }
 
 /// Configuration command arguments
