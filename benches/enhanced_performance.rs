@@ -65,10 +65,22 @@ async fn create_optimized_config(
         user_agent: "benchmark-agent/1.0".to_string(),
         cache: cache_store.0.clone(),
         bypass_cache: false,
+        benchmark_mode: true,
     };
 
     let batcher = if enable_batching {
-        let client = ApiClientFactory::create(ApiType::Nlic, client_config.clone()).unwrap();
+        // Create benchmark-safe client config
+        let bench_config = ClientConfig {
+            api_key: "benchmark_key".to_string(),
+            timeout: 30,
+            max_retries: 3,
+            retry_base_delay: 100,
+            user_agent: "benchmark-agent/1.0".to_string(),
+            cache: client_config.cache.clone(),
+            bypass_cache: false,
+            benchmark_mode: true,
+        };
+        let client = ApiClientFactory::create(ApiType::Nlic, bench_config).unwrap();
         let batch_config = BatchConfig {
             max_batch_size: 10,
             max_batch_delay: Duration::from_millis(50),
@@ -188,9 +200,15 @@ fn bench_connection_pool_performance(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let mut group = c.benchmark_group("connection_pools");
 
-    // Test different pool configurations
+    // Test different pool configurations (with background tasks disabled for benchmarking)
     let pool_configs = [
-        ("default", AdaptivePoolConfig::default()),
+        (
+            "default",
+            AdaptivePoolConfig {
+                disable_background_task: true,
+                ..AdaptivePoolConfig::default()
+            },
+        ),
         (
             "high_throughput",
             AdaptivePoolConfig {
@@ -199,6 +217,7 @@ fn bench_connection_pool_performance(c: &mut Criterion) {
                 target_utilization: 0.8,
                 scale_up_threshold: 0.9,
                 scale_down_threshold: 0.2,
+                disable_background_task: true,
                 ..AdaptivePoolConfig::default()
             },
         ),
@@ -208,6 +227,7 @@ fn bench_connection_pool_performance(c: &mut Criterion) {
                 initial_size: 50,
                 max_size: 50, // Fixed size for consistent latency
                 target_utilization: 0.5,
+                disable_background_task: true,
                 ..AdaptivePoolConfig::default()
             },
         ),
@@ -406,17 +426,21 @@ fn bench_memory_patterns(c: &mut Criterion) {
 
 /// Comprehensive end-to-end performance benchmark
 fn bench_end_to_end_performance(c: &mut Criterion) {
-    let _rt = Runtime::new().unwrap();
+    let rt = Runtime::new().unwrap();
     let mut group = c.benchmark_group("end_to_end");
     group.sample_size(10); // Reduce sample size for complex benchmarks
 
     // Test complete workflow with all optimizations enabled
     group.bench_function("full_optimized_workflow", |b| {
         b.iter(|| {
-            // Simplified synchronous test for basic functionality
-            let metrics = get_global_metrics();
-            metrics.record_request_success("benchmark_test", std::time::Duration::from_millis(100));
-            std::mem::drop(black_box(metrics.get_snapshot()));
+            rt.block_on(async {
+                let metrics = get_global_metrics();
+                metrics.record_request_success(
+                    "benchmark_test",
+                    std::time::Duration::from_millis(100),
+                );
+                std::mem::drop(black_box(metrics.get_snapshot().await));
+            })
         })
     });
 

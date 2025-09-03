@@ -47,6 +47,8 @@ pub struct ClientConfig {
     pub cache: Option<Arc<CacheStore>>,
     /// Whether to bypass cache for requests
     pub bypass_cache: bool,
+    /// Whether to use benchmark-safe mode (disables background tasks)
+    pub benchmark_mode: bool,
 }
 
 impl Default for ClientConfig {
@@ -59,6 +61,7 @@ impl Default for ClientConfig {
             user_agent: format!("warp/{}", env!("CARGO_PKG_VERSION")),
             cache: None,
             bypass_cache: false,
+            benchmark_mode: false,
         }
     }
 }

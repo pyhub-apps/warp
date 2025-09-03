@@ -1,4 +1,7 @@
-use super::pool::{create_adaptive_client, get_pool_registry, AdaptivePoolConfig};
+use super::pool::{
+    create_adaptive_client, create_adaptive_client_for_benchmarks, get_pool_registry,
+    AdaptivePoolConfig,
+};
 use once_cell::sync::Lazy;
 use reqwest::{Client, ClientBuilder};
 use std::sync::Arc;
@@ -73,6 +76,13 @@ pub fn create_custom_client(timeout_secs: u64, user_agent: &str) -> Client {
     // Generate pool name based on timeout and user agent for logical separation
     let pool_name = format!("http_{}s", timeout_secs);
     create_adaptive_client(&pool_name, timeout_secs, user_agent)
+}
+
+/// Create an HTTP client for benchmarks/tests (without background tasks)
+pub fn create_custom_client_for_benchmarks(timeout_secs: u64, user_agent: &str) -> Client {
+    // Generate pool name based on timeout and user agent for logical separation
+    let pool_name = format!("bench_http_{}s", timeout_secs);
+    create_adaptive_client_for_benchmarks(&pool_name, timeout_secs, user_agent)
 }
 
 /// Create an HTTP client with custom configuration and pool name

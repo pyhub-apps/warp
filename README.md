@@ -335,6 +335,32 @@ cargo build --release --target aarch64-apple-darwin
 cargo build --release --target x86_64-unknown-linux-gnu
 ```
 
+### 벤치마크 실행
+
+프로젝트에는 성능 측정을 위한 벤치마크 도구가 포함되어 있습니다:
+
+```bash
+# 모든 벤치마크 실행
+cargo bench
+
+# API 성능 벤치마크
+cargo bench --bench api_performance
+
+# 향상된 성능 벤치마크 (캐싱, 배치 처리 등)
+cargo bench --bench enhanced_performance
+
+# 특정 벤치마크만 실행
+cargo bench --bench api_performance single_search
+```
+
+벤치마크는 다음 항목들을 측정합니다:
+
+- API 클라이언트 생성 성능
+- 검색 요청 처리 시간
+- 캐시 히트/미스 비율
+- 병렬 처리 성능
+- 배치 처리 효율성
+
 ## 📊 현재 상태
 
 ### ✅ 구현 완료
@@ -347,6 +373,10 @@ cargo build --release --target x86_64-unknown-linux-gnu
 - 설정 관리 시스템
 - 재시도 로직 (지수 백오프)
 - 에러 처리 개선
+- **캐싱 시스템** (다층 캐시 지원, 압축 최적화)
+- **진행 상황 표시기** (실시간 검색 진행률 표시)
+- **성능 최적화** (연결 풀링, 적응형 배치 처리)
+- **개발자 도구** (벤치마크 및 성능 측정 지원)
 
 ### 🚧 알려진 이슈
 
@@ -359,8 +389,8 @@ cargo build --release --target x86_64-unknown-linux-gnu
 
 - [ ] 국제화 (i18n) 지원
 - [x] Shell 자동완성 (완료 - 자동 감지 포함)
-- [ ] 캐싱 시스템
-- [ ] 진행 상황 표시기
+- [x] 캐싱 시스템 (완료 - 다층 캐시, 압축 최적화)
+- [x] 진행 상황 표시기 (완료 - 실시간 진행률 표시)
 - [ ] 일괄 처리 기능
 - [ ] 검색 필터 고급 옵션
 
@@ -380,11 +410,11 @@ cargo build --release --target x86_64-unknown-linux-gnu
 
 ### 💳 라이센스 유형 및 가격
 
-| 라이센스 | 가격 | 사용자 수 | 지원 |
-|---------|------|-----------|------|
-| **Personal** | ₩99,000/년 | 1명 (개인) | 이메일 지원 |
-| **Team** | ₩490,000/년 | 최대 10명 | 우선 지원 |
-| **Enterprise** | 문의 | 무제한 | 전담 지원 |
+| 라이센스       | 가격        | 사용자 수  | 지원        |
+| -------------- | ----------- | ---------- | ----------- |
+| **Personal**   | ₩99,000/년  | 1명 (개인) | 이메일 지원 |
+| **Team**       | ₩490,000/년 | 최대 10명  | 우선 지원   |
+| **Enterprise** | 문의        | 무제한     | 전담 지원   |
 
 ### 📋 평가판
 
@@ -403,7 +433,9 @@ wget https://github.com/pyhub-apps/warp/releases/latest/download/warp-trial.tar.
 
 ### 📜 라이센스 조건
 
-본 소프트웨어는 독점 상업용 라이센스로 보호됩니다. 자세한 내용은 다음을 참조하세요:
+본 소프트웨어는 독점 상업용 라이센스로 보호됩니다. 자세한 내용은 다음을
+참조하세요:
+
 - [LICENSE](LICENSE) - 라이센스 전문
 - [EULA.md](EULA.md) - 최종 사용자 라이센스 동의서
 

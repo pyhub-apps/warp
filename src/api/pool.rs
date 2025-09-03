@@ -27,6 +27,8 @@ pub struct AdaptivePoolConfig {
     pub scale_up_threshold: f64,
     /// Utilization threshold for scaling down
     pub scale_down_threshold: f64,
+    /// Disable background task for testing/benchmarking environments
+    pub disable_background_task: bool,
 }
 
 impl Default for AdaptivePoolConfig {
@@ -41,6 +43,7 @@ impl Default for AdaptivePoolConfig {
             target_utilization: 0.7,
             scale_up_threshold: 0.8,
             scale_down_threshold: 0.3,
+            disable_background_task: false,
         }
     }
 }
@@ -105,13 +108,17 @@ impl AdaptiveConnectionPool {
         let connection_semaphore = Arc::new(Semaphore::new(config.initial_size as usize));
         let stats = Arc::new(RwLock::new(PoolStats::default()));
 
-        // Start background pool management task
-        let background_task = Self::start_background_task(
-            pool_name.clone(),
-            config.clone(),
-            Arc::clone(&stats),
-            Arc::clone(&connection_semaphore),
-        );
+        // Conditionally start background pool management task
+        let background_task = if !config.disable_background_task {
+            Some(Self::start_background_task(
+                pool_name.clone(),
+                config.clone(),
+                Arc::clone(&stats),
+                Arc::clone(&connection_semaphore),
+            ))
+        } else {
+            None
+        };
 
         Self {
             config,
@@ -119,7 +126,7 @@ impl AdaptiveConnectionPool {
             connection_semaphore,
             stats,
             pool_name,
-            _background_task: Some(background_task),
+            _background_task: background_task,
         }
     }
 
@@ -415,6 +422,23 @@ pub fn get_pool_registry() -> &'static PoolRegistry {
 pub fn create_adaptive_client(pool_name: &str, timeout_secs: u64, user_agent: &str) -> Client {
     let config = AdaptivePoolConfig {
         connection_timeout: Duration::from_secs(timeout_secs),
+        ..AdaptivePoolConfig::default()
+    };
+
+    let registry = get_pool_registry();
+    let pool = registry.get_or_create_pool(pool_name, config, user_agent);
+    pool.client().clone()
+}
+
+/// Create an adaptive HTTP client with background tasks disabled (for benchmarks/tests)
+pub fn create_adaptive_client_for_benchmarks(
+    pool_name: &str,
+    timeout_secs: u64,
+    user_agent: &str,
+) -> Client {
+    let config = AdaptivePoolConfig {
+        connection_timeout: Duration::from_secs(timeout_secs),
+        disable_background_task: true,
         ..AdaptivePoolConfig::default()
     };
 

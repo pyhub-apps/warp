@@ -9,7 +9,7 @@ use tokio::time::sleep;
 
 use super::client::ClientConfig;
 use super::deserializers::single_or_vec;
-use super::http_client::create_custom_client;
+use super::http_client::{create_custom_client, create_custom_client_for_benchmarks};
 use super::types::*;
 use super::{ApiType, LegalApiClient};
 use crate::cache::key::CacheKeyGenerator;
@@ -28,8 +28,12 @@ pub struct NlicClient {
 impl NlicClient {
     /// Create a new NLIC client with optimized HTTP client
     pub fn new(config: ClientConfig) -> Self {
-        // Use optimized HTTP client with connection pooling
-        let http_client = create_custom_client(config.timeout, &config.user_agent);
+        // Use appropriate HTTP client based on benchmark mode
+        let http_client = if config.benchmark_mode {
+            create_custom_client_for_benchmarks(config.timeout, &config.user_agent)
+        } else {
+            create_custom_client(config.timeout, &config.user_agent)
+        };
 
         Self {
             config,

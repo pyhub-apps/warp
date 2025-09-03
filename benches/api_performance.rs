@@ -25,6 +25,7 @@ async fn create_test_config(enable_cache: bool) -> ClientConfig {
         user_agent: "test-agent/1.0".to_string(),
         cache: cache_store,
         bypass_cache: false,
+        benchmark_mode: true,
     }
 }
 
