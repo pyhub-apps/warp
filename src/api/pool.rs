@@ -49,6 +49,7 @@ impl Default for AdaptivePoolConfig {
 #[derive(Debug, Clone)]
 struct PoolStats {
     active_connections: u32,
+    #[allow(dead_code)] // Used for monitoring/debugging purposes
     idle_connections: u32,
     total_acquires: u64,
     successful_acquires: u64,
@@ -251,7 +252,8 @@ impl AdaptiveConnectionPool {
                     };
 
                     // Decide on resize action
-                    let resize_decision = if avg_utilization > config.scale_up_threshold
+
+                    if avg_utilization > config.scale_up_threshold
                         && current_size < config.max_size as usize
                     {
                         Some(ResizeAction::ScaleUp)
@@ -261,9 +263,7 @@ impl AdaptiveConnectionPool {
                         Some(ResizeAction::ScaleDown)
                     } else {
                         None
-                    };
-
-                    resize_decision
+                    }
                 };
 
                 // Execute resize if needed
@@ -323,7 +323,7 @@ pub struct ConnectionPermit<'a> {
     acquired_at: Instant,
 }
 
-impl<'a> Drop for ConnectionPermit<'a> {
+impl Drop for ConnectionPermit<'_> {
     fn drop(&mut self) {
         // Update stats when connection is released
         {
@@ -404,7 +404,7 @@ impl PoolRegistry {
 }
 
 /// Global pool registry
-static POOL_REGISTRY: Lazy<PoolRegistry> = Lazy::new(|| PoolRegistry::new());
+static POOL_REGISTRY: Lazy<PoolRegistry> = Lazy::new(PoolRegistry::new);
 
 /// Get the global pool registry
 pub fn get_pool_registry() -> &'static PoolRegistry {

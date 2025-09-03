@@ -211,10 +211,12 @@ mod tests {
 
     #[test]
     fn test_operation_metrics_success_rate() {
-        let mut metrics = OperationMetrics::default();
-        metrics.total_requests = 100;
-        metrics.successful_requests = 85;
-        metrics.failed_requests = 15;
+        let metrics = OperationMetrics {
+            total_requests: 100,
+            successful_requests: 85,
+            failed_requests: 15,
+            ..Default::default()
+        };
 
         assert_eq!(metrics.success_rate(), 85.0);
         assert_eq!(metrics.error_rate(), 15.0);
@@ -222,9 +224,11 @@ mod tests {
 
     #[test]
     fn test_cache_metrics_hit_rate() {
-        let mut metrics = CacheMetrics::default();
-        metrics.hits = 80;
-        metrics.misses = 20;
+        let metrics = CacheMetrics {
+            hits: 80,
+            misses: 20,
+            ..Default::default()
+        };
 
         assert_eq!(metrics.hit_rate(), 80.0);
         assert_eq!(metrics.miss_rate(), 20.0);
@@ -232,10 +236,12 @@ mod tests {
 
     #[test]
     fn test_connection_pool_utilization() {
-        let mut metrics = ConnectionPoolMetrics::default();
-        metrics.active_connections = 8;
-        metrics.idle_connections = 2;
-        metrics.total_connections = 10;
+        let metrics = ConnectionPoolMetrics {
+            active_connections: 8,
+            idle_connections: 2,
+            total_connections: 10,
+            ..Default::default()
+        };
 
         assert_eq!(metrics.utilization(), 80.0);
     }

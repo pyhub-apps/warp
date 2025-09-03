@@ -241,7 +241,7 @@ impl MetricsCollector {
     }
 
     /// Get metrics for a specific time window
-    pub async fn get_windowed_metrics(&self, window: MetricsWindow) -> MetricsSnapshot {
+    pub async fn get_windowed_metrics(&self, _window: MetricsWindow) -> MetricsSnapshot {
         // For now, return current snapshot
         // TODO: Implement time-windowed metrics with historical data
         self.get_snapshot().await
@@ -353,7 +353,7 @@ mod tests {
             stats.add_duration(Duration::from_millis(ms));
         }
 
-        let (p50, p95, p99) = stats.calculate_percentiles();
+        let (p50, p95, _p99) = stats.calculate_percentiles();
 
         // With 10 samples, p50 should be around 500ms
         assert!(p50 >= Duration::from_millis(400) && p50 <= Duration::from_millis(600));

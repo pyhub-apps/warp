@@ -70,7 +70,7 @@ impl PerformanceDashboard {
         let mut output = String::new();
 
         // Find most active operation
-        if let Some((op_name, metrics)) = snapshot
+        if let Some((_op_name, metrics)) = snapshot
             .operations
             .iter()
             .max_by_key(|(_, m)| m.total_requests)

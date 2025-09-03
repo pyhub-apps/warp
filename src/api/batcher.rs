@@ -1,5 +1,5 @@
-use super::types::{LawDetail, LawHistory, SearchResponse, UnifiedSearchRequest};
-use super::{ApiType, LegalApiClient};
+use super::types::{SearchResponse, UnifiedSearchRequest};
+use super::LegalApiClient;
 use crate::error::{Result, WarpError};
 use crate::metrics::get_global_metrics;
 use std::collections::{HashMap, HashSet};
@@ -204,22 +204,6 @@ impl RequestBatcher {
         }
 
         None
-    }
-
-    /// Cache a response for deduplication
-    fn cache_response(&self, key: RequestKey, response: SearchResponse) {
-        let mut cache = self.response_cache.write().unwrap();
-        cache.insert(
-            key,
-            CachedResponse {
-                response,
-                created_at: Instant::now(),
-            },
-        );
-
-        // Cleanup expired entries (simple cleanup, not comprehensive)
-        let cutoff = Instant::now() - self.config.deduplication_ttl;
-        cache.retain(|_, cached| cached.created_at > cutoff);
     }
 
     /// Start background processing task
@@ -492,7 +476,8 @@ impl BatcherFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::types::ResponseType;
+    use crate::api::types::{LawDetail, LawHistory, ResponseType};
+    use crate::api::ApiType;
     use async_trait::async_trait;
     use std::sync::atomic::{AtomicUsize, Ordering};
 

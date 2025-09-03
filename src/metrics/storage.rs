@@ -4,7 +4,6 @@ use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::time::Duration;
 
 /// Persistent storage for metrics data and historical analysis
 pub struct MetricsStorage {
@@ -410,9 +409,9 @@ pub struct StorageStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::metrics::{CacheMetrics, ConnectionPoolMetrics, OperationMetrics};
+    use crate::metrics::{CacheMetrics, OperationMetrics};
     use std::collections::HashMap;
-    use std::time::Instant;
+    use std::time::{Duration, Instant};
     use tempfile::TempDir;
 
     async fn create_test_storage() -> (MetricsStorage, TempDir) {

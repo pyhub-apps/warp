@@ -62,8 +62,10 @@ impl Default for TieredCacheConfig {
 #[derive(Debug, Clone)]
 struct L1Entry {
     data: Vec<u8>,
+    #[allow(dead_code)] // Used for cache analysis and debugging
     created_at: DateTime<Utc>,
     expires_at: DateTime<Utc>,
+    #[allow(dead_code)] // Used for cache analysis and API-specific metrics
     api_type: ApiType,
     access_count: u64,
     compressed: bool,
@@ -165,6 +167,7 @@ impl TieredCache {
     }
 
     /// Get cached data, checking all tiers
+    #[allow(clippy::await_holding_lock)] // Stats updates are brief
     pub async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
         // L1 cache check (fast path)
         if let Some(data) = self.get_from_l1(key).await {
@@ -409,16 +412,12 @@ impl TieredCache {
             l1.len()
         };
 
-        let l2_stats = self
-            .l2_cache
-            .stats()
-            .await
-            .unwrap_or_else(|_| super::CacheStats {
-                total_entries: 0,
-                expired_entries: 0,
-                total_size: 0,
-                max_size: 0,
-            });
+        let l2_stats = self.l2_cache.stats().await.unwrap_or(super::CacheStats {
+            total_entries: 0,
+            expired_entries: 0,
+            total_size: 0,
+            max_size: 0,
+        });
 
         CacheUtilization {
             l1_entries: l1_count,
@@ -596,7 +595,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
         // L1 should be expired, but L2 might still have it
-        let retrieved = cache.get(key).await.unwrap();
+        let _retrieved = cache.get(key).await.unwrap();
         // The result depends on L2 TTL settings
     }
 }

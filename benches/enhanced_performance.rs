@@ -406,7 +406,7 @@ fn bench_memory_patterns(c: &mut Criterion) {
 
 /// Comprehensive end-to-end performance benchmark
 fn bench_end_to_end_performance(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
+    let _rt = Runtime::new().unwrap();
     let mut group = c.benchmark_group("end_to_end");
     group.sample_size(10); // Reduce sample size for complex benchmarks
 
@@ -416,7 +416,7 @@ fn bench_end_to_end_performance(c: &mut Criterion) {
             // Simplified synchronous test for basic functionality
             let metrics = get_global_metrics();
             metrics.record_request_success("benchmark_test", std::time::Duration::from_millis(100));
-            let _ = black_box(metrics.get_snapshot());
+            std::mem::drop(black_box(metrics.get_snapshot()));
         })
     });
 

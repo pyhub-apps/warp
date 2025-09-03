@@ -111,7 +111,7 @@ impl Cli {
         let locale = lang
             .clone()
             .or_else(|| std::env::var("LANG").ok())
-            .or_else(|| sys_locale::get_locale())
+            .or_else(sys_locale::get_locale)
             .unwrap_or_else(|| "en".to_string());
 
         let normalized_locale = if locale.starts_with("ko") { "ko" } else { "en" };
