@@ -7,6 +7,7 @@ use tokio::sync::RwLock;
 
 pub mod key;
 pub mod storage;
+pub mod tiered;
 
 pub use key::{CacheKeyGenerator, PrecKeyParams};
 use storage::SqliteStorage;

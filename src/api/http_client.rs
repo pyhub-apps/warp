@@ -1,10 +1,11 @@
+use super::pool::{create_adaptive_client, get_pool_registry, AdaptivePoolConfig};
 use once_cell::sync::Lazy;
 use reqwest::{Client, ClientBuilder};
 use std::sync::Arc;
 use std::time::Duration;
 
-/// Shared HTTP client pool for optimal connection reuse
-/// This provides connection pooling and reduces the overhead of creating new HTTP clients
+/// Legacy HTTP client pool for backward compatibility
+/// This provides basic connection pooling
 pub struct HttpClientPool {
     client: Client,
 }
@@ -52,32 +53,43 @@ impl Default for HttpClientPool {
     }
 }
 
-/// Global HTTP client pool instance
+/// Global HTTP client pool instance (legacy)
 /// This is initialized once and shared across all API clients
 static HTTP_CLIENT_POOL: Lazy<Arc<HttpClientPool>> = Lazy::new(|| Arc::new(HttpClientPool::new()));
 
-/// Get the global HTTP client pool
+/// Get the global HTTP client pool (legacy)
 pub fn get_http_client_pool() -> Arc<HttpClientPool> {
     HTTP_CLIENT_POOL.clone()
 }
 
-/// Get a shared HTTP client instance
+/// Get a shared HTTP client instance (legacy)
 pub fn get_http_client() -> &'static Client {
     HTTP_CLIENT_POOL.client()
 }
 
-/// Create an HTTP client with custom configuration
+/// Create an HTTP client with custom configuration using adaptive pooling
+/// This is the preferred method for new code
 pub fn create_custom_client(timeout_secs: u64, user_agent: &str) -> Client {
-    ClientBuilder::new()
-        .pool_max_idle_per_host(10)
-        .pool_idle_timeout(Duration::from_secs(30))
-        .timeout(Duration::from_secs(timeout_secs))
-        .user_agent(user_agent)
-        .tcp_keepalive(Duration::from_secs(60))
-        .tcp_nodelay(true)
-        .use_rustls_tls()
-        .build()
-        .expect("Failed to create custom HTTP client")
+    // Generate pool name based on timeout and user agent for logical separation
+    let pool_name = format!("http_{}s", timeout_secs);
+    create_adaptive_client(&pool_name, timeout_secs, user_agent)
+}
+
+/// Create an HTTP client with custom configuration and pool name
+/// Allows fine-grained control over connection pooling
+pub fn create_custom_client_with_pool(
+    pool_name: &str,
+    timeout_secs: u64,
+    user_agent: &str,
+    pool_config: Option<AdaptivePoolConfig>,
+) -> Client {
+    if let Some(config) = pool_config {
+        let registry = get_pool_registry();
+        let pool = registry.get_or_create_pool(pool_name, config, user_agent);
+        pool.client().clone()
+    } else {
+        create_adaptive_client(pool_name, timeout_secs, user_agent)
+    }
 }
 
 #[cfg(test)]
