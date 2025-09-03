@@ -45,14 +45,8 @@ pub async fn execute(
         return execute_parallel_search(args, format, quiet, verbose, api_types, config).await;
     }
 
-    // Create search request
-    let request = UnifiedSearchRequest {
-        query: args.query.clone(),
-        page_no: args.page,
-        page_size: args.size,
-        response_type: ResponseType::Json,
-        ..Default::default()
-    };
+    // Create search request with filters
+    let request = create_search_request(&args);
 
     // Execute searches in parallel
     let mut tasks = Vec::new();
@@ -186,8 +180,8 @@ pub async fn execute(
         return Ok(());
     }
 
-    // Merge responses
-    let merged_response = merge_responses(all_responses);
+    // Merge responses with post-processing
+    let merged_response = merge_responses_with_filtering(all_responses, &args);
 
     // Format and output
     let output = output::format_search_response(&merged_response, format)?;
@@ -229,14 +223,14 @@ fn parse_source(source: &str) -> Vec<ApiType> {
     }
 }
 
-/// Merge multiple search responses into one
-fn merge_responses(responses: Vec<(ApiType, SearchResponse)>) -> SearchResponse {
-    let mut total_count = 0;
+/// Merge multiple search responses with advanced filtering and processing
+fn merge_responses_with_filtering(
+    responses: Vec<(ApiType, SearchResponse)>,
+    args: &SearchArgs,
+) -> SearchResponse {
     let mut all_items = Vec::new();
 
     for (api_type, mut response) in responses {
-        total_count += response.total_count;
-
         // Add source info to each item
         for item in &mut response.items {
             item.source = api_type.display_name().to_string();
@@ -245,17 +239,131 @@ fn merge_responses(responses: Vec<(ApiType, SearchResponse)>) -> SearchResponse 
         all_items.extend(response.items);
     }
 
-    // Sort by relevance (in this simple implementation, we keep the order)
-    // In a more sophisticated implementation, we could score and sort by relevance
+    // Apply client-side filters
+    let filtered_items = apply_client_side_filters(all_items, args);
+
+    // Sort results based on specified order
+    let sorted_items = sort_search_results(filtered_items, &args.sort);
 
     SearchResponse {
-        total_count,
-        page_no: 1, // Always 1 for merged results
-        page_size: all_items.len() as u32,
-        items: all_items,
+        total_count: sorted_items.len() as u32, // Update count after filtering
+        page_no: 1,                             // Always 1 for merged results
+        page_size: sorted_items.len() as u32,
+        items: sorted_items,
         source: "통합검색".to_string(),
         timestamp: Utc::now(),
     }
+}
+
+/// Apply client-side filters that can't be handled by APIs
+fn apply_client_side_filters(
+    mut items: Vec<crate::api::types::SearchItem>,
+    args: &SearchArgs,
+) -> Vec<crate::api::types::SearchItem> {
+    use regex::Regex;
+
+    // Apply regex search if enabled
+    if args.regex {
+        if let Ok(regex) = Regex::new(&args.query) {
+            items.retain(|item| {
+                regex.is_match(&item.title)
+                    || item.summary.as_ref().is_some_and(|s| regex.is_match(s))
+            });
+        }
+    }
+
+    // Apply title-only search if enabled
+    if args.title_only {
+        let query_lower = args.query.to_lowercase();
+        items.retain(|item| item.title.to_lowercase().contains(&query_lower));
+    }
+
+    // Apply minimum score filter if specified
+    if let Some(min_score) = args.min_score {
+        // For now, we'll use a simple relevance heuristic based on query match
+        let query_terms: Vec<&str> = args.query.split_whitespace().collect();
+        items.retain(|item| {
+            let title_lower = item.title.to_lowercase();
+            let summary_lower = item
+                .summary
+                .as_ref()
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
+
+            let match_count = query_terms
+                .iter()
+                .filter(|term| {
+                    let term_lower = term.to_lowercase();
+                    title_lower.contains(&term_lower) || summary_lower.contains(&term_lower)
+                })
+                .count();
+
+            let relevance_score = match_count as f32 / query_terms.len() as f32;
+            relevance_score >= min_score
+        });
+    }
+
+    // Apply law type filter (additional filtering for comma-separated values)
+    if let Some(ref law_types) = args.law_type {
+        let allowed_types: Vec<&str> = law_types.split(',').map(|s| s.trim()).collect();
+        items.retain(|item| {
+            item.law_type
+                .as_ref()
+                .is_some_and(|lt| allowed_types.iter().any(|allowed| lt.contains(allowed)))
+        });
+    }
+
+    // Apply department filter (additional filtering for comma-separated values)
+    if let Some(ref departments) = args.department {
+        let allowed_departments: Vec<&str> = departments.split(',').map(|s| s.trim()).collect();
+        items.retain(|item| {
+            item.department.as_ref().is_some_and(|dept| {
+                allowed_departments
+                    .iter()
+                    .any(|allowed| dept.contains(allowed))
+            })
+        });
+    }
+
+    items
+}
+
+/// Sort search results based on specified sort order
+fn sort_search_results(
+    mut items: Vec<crate::api::types::SearchItem>,
+    sort_order: &str,
+) -> Vec<crate::api::types::SearchItem> {
+    match sort_order {
+        "date_asc" => {
+            items.sort_by(|a, b| {
+                a.enforcement_date
+                    .cmp(&b.enforcement_date)
+                    .then_with(|| a.revision_date.cmp(&b.revision_date))
+            });
+        }
+        "date_desc" => {
+            items.sort_by(|a, b| {
+                b.enforcement_date
+                    .cmp(&a.enforcement_date)
+                    .then_with(|| b.revision_date.cmp(&a.revision_date))
+            });
+        }
+        "title_asc" => {
+            items.sort_by(|a, b| a.title.cmp(&b.title));
+        }
+        "title_desc" => {
+            items.sort_by(|a, b| b.title.cmp(&a.title));
+        }
+        "relevance" => {
+            // Keep original order for relevance (APIs return results by relevance)
+            // Could implement more sophisticated relevance scoring here
+        }
+        _ => {
+            // Default to relevance for unknown sort orders
+        }
+    }
+
+    items
 }
 
 /// Parse APIs string (comma-separated) to ApiType vector
@@ -321,14 +429,8 @@ async fn execute_parallel_search(
         batch_delay: Duration::from_millis(100),
     };
 
-    // Create search request
-    let request = UnifiedSearchRequest {
-        query: args.query.clone(),
-        page_no: args.page,
-        page_size: args.size,
-        response_type: ResponseType::Json,
-        ..Default::default()
-    };
+    // Create search request with filters
+    let request = create_search_request(&args);
 
     // Create API clients with optimization
     let mut clients = Vec::new();
@@ -357,7 +459,7 @@ async fn execute_parallel_search(
                 );
             }
 
-            let merged_response = merge_responses(parallel_result.successes);
+            let merged_response = merge_responses_with_filtering(parallel_result.successes, &args);
             let formatted_output = output::format_search_response(&merged_response, format)?;
             if !quiet {
                 println!("{}", formatted_output);
@@ -430,4 +532,81 @@ fn create_optimized_client_config(
         bypass_cache: false,
         benchmark_mode: false,
     })
+}
+
+/// Create UnifiedSearchRequest with filters from SearchArgs
+fn create_search_request(args: &SearchArgs) -> UnifiedSearchRequest {
+    use crate::api::types::SortOrder;
+    use std::collections::HashMap;
+
+    // Determine sort order
+    let sort_order = match args.sort.as_str() {
+        "date_asc" => Some(SortOrder::DateAsc),
+        "date_desc" => Some(SortOrder::DateDesc),
+        "title_asc" => Some(SortOrder::TitleAsc),
+        "title_desc" => Some(SortOrder::TitleDesc),
+        "relevance" => Some(SortOrder::Relevance),
+        _ => Some(SortOrder::Relevance), // Default to relevance
+    };
+
+    // Prepare extra parameters for advanced filtering
+    let mut extras = HashMap::new();
+
+    // Add regex search mode if enabled
+    if args.regex {
+        extras.insert("regex_search".to_string(), "true".to_string());
+    }
+
+    // Add title-only search mode if enabled
+    if args.title_only {
+        extras.insert("title_only".to_string(), "true".to_string());
+    }
+
+    // Add minimum score filter if specified
+    if let Some(min_score) = args.min_score {
+        extras.insert("min_score".to_string(), min_score.to_string());
+    }
+
+    // Add case type filter for precedents
+    if let Some(ref case_type) = args.case_type {
+        extras.insert("case_type".to_string(), case_type.clone());
+    }
+
+    // Add court filter for precedents
+    if let Some(ref court) = args.court {
+        extras.insert("court".to_string(), court.clone());
+    }
+
+    // Add status filter
+    if let Some(ref status) = args.status {
+        extras.insert("status".to_string(), status.clone());
+    }
+
+    // Handle date range filters
+    let (date_from, date_to) = if let Some(recent_days) = args.recent_days {
+        // Calculate date range for recent days filter
+        use chrono::{Duration as ChronoDuration, Utc};
+        let end_date = Utc::now();
+        let start_date = end_date - ChronoDuration::days(recent_days as i64);
+        (
+            Some(start_date.format("%Y%m%d").to_string()),
+            Some(end_date.format("%Y%m%d").to_string()),
+        )
+    } else {
+        (args.from.clone(), args.to.clone())
+    };
+
+    UnifiedSearchRequest {
+        query: args.query.clone(),
+        page_no: args.page,
+        page_size: args.size,
+        response_type: ResponseType::Json,
+        region: args.region.clone(),
+        law_type: args.law_type.clone(),
+        department: args.department.clone(),
+        date_from,
+        date_to,
+        sort: sort_order,
+        extras,
+    }
 }

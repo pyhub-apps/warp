@@ -251,6 +251,63 @@ pub struct SearchArgs {
     /// Disable cache for this search
     #[arg(long, help = "Bypass all caching for fresh results")]
     pub no_cache: bool,
+
+    // Advanced filtering options
+    /// Law type filter (법률, 시행령, 시행규칙, 고시, 훈령, etc.)
+    #[arg(long, help = "Law type filter (comma-separated: 법률,시행령,시행규칙)")]
+    pub law_type: Option<String>,
+
+    /// Department filter (부처명)
+    #[arg(long, help = "Department filter (comma-separated: 법무부,행안부)")]
+    pub department: Option<String>,
+
+    /// Date range start (YYYYMMDD format)
+    #[arg(long, help = "Start date for filtering (YYYYMMDD)")]
+    pub from: Option<String>,
+
+    /// Date range end (YYYYMMDD format)
+    #[arg(long, help = "End date for filtering (YYYYMMDD)")]
+    pub to: Option<String>,
+
+    /// Recent days filter (alternative to from/to)
+    #[arg(long, help = "Filter by recent N days")]
+    pub recent_days: Option<u32>,
+
+    /// Status filter (시행중, 폐지, 일부개정, etc.)
+    #[arg(long, help = "Status filter (시행중,폐지,일부개정)")]
+    pub status: Option<String>,
+
+    /// Region filter for local ordinances
+    #[arg(long, help = "Region filter for local ordinances (서울,부산,대구)")]
+    pub region: Option<String>,
+
+    /// Court filter for precedents
+    #[arg(long, help = "Court filter for precedents (대법원,고등법원)")]
+    pub court: Option<String>,
+
+    /// Case type filter for precedents
+    #[arg(long, help = "Case type filter for precedents (민사,형사,행정)")]
+    pub case_type: Option<String>,
+
+    /// Sort order
+    #[arg(
+        long,
+        default_value = "relevance",
+        help = "Sort order: relevance, date_asc, date_desc, title_asc, title_desc"
+    )]
+    pub sort: String,
+
+    /// Enable regex search mode
+    #[arg(long, help = "Enable regular expression search")]
+    pub regex: bool,
+
+    /// Search only in title
+    #[arg(long, help = "Search only in document titles")]
+    pub title_only: bool,
+
+    /// Minimum relevance score (0.0-1.0)
+    #[arg(long, help = "Minimum relevance score filter (0.0-1.0)")]
+    pub min_score: Option<f32>,
 }
 
 /// Configuration command arguments

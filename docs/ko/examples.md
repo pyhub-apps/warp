@@ -262,6 +262,77 @@ warp search "음주운전" --source nlic,prec
 warp search "환경" --source nlic,elis,admrul
 ```
 
+### 🔍 고급 필터링 옵션 (Issue #34)
+
+```bash
+# 날짜 범위 필터
+warp search "개인정보보호법" --from 20240101 --to 20241231
+
+# 최근 30일 내 법령 검색
+warp search "환경보호" --recent-days 30
+
+# 법령 유형 필터 (쉼표로 구분)
+warp search "세법" --law-type "법률,시행령,시행규칙"
+
+# 부처별 필터
+warp search "교육" --department "교육부,교육청"
+
+# 지역 필터 (자치법규)
+warp search "주차" --region "서울,부산,대구"
+
+# 법원별 필터 (판례)
+warp search "손해배상" --court "대법원,고등법원"
+
+# 사건 유형 필터 (판례)
+warp search "계약" --case-type "민사,상사"
+
+# 시행 상태 필터
+warp search "규제개혁" --status "시행중,일부개정"
+
+# 정렬 옵션
+warp search "민법" --sort date_desc  # 최신순
+warp search "상법" --sort title_asc   # 제목순
+warp search "형법" --sort relevance   # 관련성순
+
+# 정규표현식 검색
+warp search "개인정보.*보호" --regex
+
+# 제목만 검색 (내용 제외)
+warp search "환경" --title-only
+
+# 최소 관련성 점수 필터 (0.0-1.0)
+warp search "계약" --min-score 0.8
+
+# 복합 필터 조합
+warp search "개인정보" \
+  --law-type "법률,시행령" \
+  --department "개인정보보호위원회,방통위" \
+  --recent-days 90 \
+  --sort date_desc \
+  --min-score 0.7
+```
+
+### 📊 필터링 성능 최적화
+
+```bash
+# 병렬 검색과 필터 조합
+warp search "민법" \
+  --parallel \
+  --apis nlic,elis,prec \
+  --law-type "법률" \
+  --sort relevance \
+  --cache-tier 2
+
+# 배치 처리로 필터링 성능 향상
+warp search "부동산" \
+  --parallel \
+  --batch \
+  --batch-size 15 \
+  --recent-days 60 \
+  --region "서울,경기" \
+  --sort date_desc
+```
+
 ## 🎯 고급 사용 시나리오
 
 ### 시나리오 1: 법령 개정 이력 추적
