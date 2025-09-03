@@ -156,7 +156,11 @@ fn detect_from_parent_process() -> Option<DetectedShell> {
 pub fn confirm_shell_selection(shell: &DetectedShell) -> bool {
     use std::io::{self, Write};
 
-    println!("🔍 {}: {}", t!("shell_completions.detected"), shell.display_name());
+    println!(
+        "🔍 {}: {}",
+        t!("shell_completions.detected"),
+        shell.display_name()
+    );
 
     match shell {
         DetectedShell::WindowsCmd => {

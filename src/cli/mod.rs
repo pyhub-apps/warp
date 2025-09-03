@@ -108,17 +108,13 @@ impl Cli {
     /// Initialize i18n locale
     fn init_locale(lang: Option<String>) {
         // Priority: 1. Explicit --lang flag, 2. LANG environment variable, 3. System locale
-        let locale = lang.clone()
+        let locale = lang
+            .clone()
             .or_else(|| std::env::var("LANG").ok())
             .or_else(|| sys_locale::get_locale())
             .unwrap_or_else(|| "en".to_string());
 
-        let normalized_locale = if locale.starts_with("ko") {
-            "ko"
-        } else {
-            "en"
-        };
-
+        let normalized_locale = if locale.starts_with("ko") { "ko" } else { "en" };
 
         rust_i18n::set_locale(normalized_locale);
     }

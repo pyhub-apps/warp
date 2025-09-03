@@ -27,6 +27,9 @@ pub enum WarpError {
     #[error("📊 CSV 처리 오류가 발생했습니다")]
     Csv(#[from] csv::Error),
 
+    #[error("🗄️ 데이터베이스 오류가 발생했습니다")]
+    Database(#[from] rusqlite::Error),
+
     #[error("🔍 응답 파싱 오류: {0}")]
     Parse(String),
 
