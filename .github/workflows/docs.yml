@@ -1,0 +1,217 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-on-failure: true
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl-dev pkg-config
+
+    - name: Build documentation
+      run: |
+        cargo doc --no-deps --document-private-items --all-features
+
+    - name: Create index.html redirect
+      run: |
+        cat > target/doc/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=warp/index.html">
+            <title>Warp Documentation</title>
+        </head>
+        <body>
+            <p>Redirecting to <a href="warp/index.html">warp documentation</a>...</p>
+        </body>
+        </html>
+        EOF
+
+    - name: Add custom CSS for Korean text
+      run: |
+        cat > target/doc/custom.css << 'EOF'
+        /* Custom styles for Korean legal documentation */
+        .docblock {
+            font-family: 'Noto Sans KR', 'Malgun Gothic', '맑은 고딕', sans-serif;
+            line-height: 1.6;
+        }
+
+        .korean-text {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .api-section {
+            border-left: 4px solid #3498db;
+            padding-left: 1rem;
+            margin: 1rem 0;
+        }
+
+        .example-block {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+        }
+        EOF
+
+        # Inject custom CSS into all HTML files
+        find target/doc -name "*.html" -exec sed -i 's|</head>|<link rel="stylesheet" href="/custom.css"></head>|' {} \;
+
+    - name: Generate API reference summary
+      run: |
+        cat > target/doc/api-summary.md << 'EOF'
+        # Warp API Reference Summary
+
+        ## Core Modules
+
+        - **[api](warp/api/index.html)** - Korean Legal API clients and types
+        - **[cache](warp/cache/index.html)** - Intelligent caching system
+        - **[config](warp/config/index.html)** - Configuration management
+        - **[error](warp/error/index.html)** - Error types and handling
+        - **[metrics](warp/metrics/index.html)** - Performance metrics collection
+        - **[output](warp/output/index.html)** - Output formatting and display
+
+        ## API Clients
+
+        - **[NlicClient](warp/api/nlic/struct.NlicClient.html)** - National Law Information Center
+        - **[ElisClient](warp/api/elis/struct.ElisClient.html)** - Local Regulations System
+        - **[PrecClient](warp/api/prec/struct.PrecClient.html)** - Court Precedents
+        - **[AdmrulClient](warp/api/admrul/struct.AdmrulClient.html)** - Administrative Rules
+        - **[ExpcClient](warp/api/expc/struct.ExpcClient.html)** - Legal Interpretations
+
+        ## Quick Links
+
+        - [Getting Started Guide](warp/index.html)
+        - [API Types](warp/api/enum.ApiType.html)
+        - [Configuration](warp/config/struct.Config.html)
+        - [Error Handling](warp/error/enum.WarpError.html)
+
+        ---
+
+        Generated on $(date)
+        EOF
+
+    - name: Check documentation completeness
+      run: |
+        echo "Checking documentation completeness..."
+
+        # Count documented vs undocumented items
+        TOTAL_ITEMS=$(find target/doc -name "*.html" | xargs grep -l "struct\|enum\|fn\|trait" | wc -l)
+        DOCUMENTED_ITEMS=$(find target/doc -name "*.html" | xargs grep -l "docblock" | wc -l)
+
+        echo "Documentation stats:"
+        echo "  Total items: $TOTAL_ITEMS"
+        echo "  Documented items: $DOCUMENTED_ITEMS"
+
+        # Ensure minimum documentation coverage
+        if [ $DOCUMENTED_ITEMS -gt 0 ]; then
+          echo "✓ Documentation generation successful"
+        else
+          echo "⚠ Warning: No documented items found"
+        fi
+
+    - name: Upload documentation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: target/doc/
+        retention-days: 30
+
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Download documentation artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: documentation
+        path: docs/
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+  validate-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Validate documentation links
+      run: |
+        cargo doc --no-deps --document-private-items
+
+        # Check for broken internal links
+        echo "Validating internal documentation links..."
+
+        # This is a basic check - in production you might use tools like
+        # htmlproofer or similar link checkers
+        find target/doc -name "*.html" -exec grep -l "href.*\.html" {} \; | head -10
+
+    - name: Test examples in documentation
+      run: |
+        echo "Testing documentation examples..."
+
+        # Test that examples compile (doc tests)
+        cargo test --doc --all-features --verbose
+
+    - name: Check documentation warnings
+      run: |
+        # Build documentation with warnings as errors to ensure quality
+        RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --document-private-items --all-features

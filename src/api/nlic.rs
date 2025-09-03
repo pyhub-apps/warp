@@ -20,13 +20,160 @@ const BASE_URL: &str = "https://www.law.go.kr/DRF/lawService.do";
 const SEARCH_URL: &str = "https://www.law.go.kr/DRF/lawSearch.do";
 
 /// NLIC (National Law Information Center) API client
+///
+/// Client for accessing Korea's National Law Information Center (국가법령정보센터),
+/// the primary repository for Korean national laws, statutes, and regulations.
+///
+/// The NLIC contains the most comprehensive collection of Korean legal documents
+/// including current laws, historical versions, and official amendments.
+///
+/// # Features
+///
+/// - **Full-text search** across Korean legal documents
+/// - **Detailed document retrieval** with complete legal text
+/// - **Revision history tracking** for law amendments
+/// - **Intelligent caching** for improved performance
+/// - **Automatic retry** with exponential backoff
+/// - **Metrics collection** for monitoring and optimization
+///
+/// # Examples
+///
+/// ## Basic Search
+///
+/// ```no_run
+/// use warp::api::{ApiClientFactory, ApiType};
+/// use warp::api::types::UnifiedSearchRequest;
+/// use warp::config::Config;
+///
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let config = Config::load()?;
+/// let client = ApiClientFactory::create(ApiType::Nlic, config.to_client_config())?;
+///
+/// let request = UnifiedSearchRequest {
+///     query: "민법".to_string(),
+///     page: Some(1),
+///     size: Some(10),
+///     ..Default::default()
+/// };
+///
+/// let response = client.search(request).await?;
+/// println!("Found {} laws", response.total_count.unwrap_or(0));
+///
+/// // Process results
+/// if let Some(laws) = response.laws {
+///     for law in laws.iter().take(5) {
+///         println!("- {}: {}", law.law_num, law.law_name);
+///     }
+/// }
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Advanced Search with Filters
+///
+/// ```no_run
+/// use warp::api::{ApiClientFactory, ApiType};
+/// use warp::api::types::UnifiedSearchRequest;
+/// use warp::config::Config;
+///
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let config = Config::load()?;
+/// let client = ApiClientFactory::create(ApiType::Nlic, config.to_client_config())?;
+///
+/// let request = UnifiedSearchRequest {
+///     query: "환경보호".to_string(),
+///     page: Some(1),
+///     size: Some(20),
+///     sort: Some("날짜".to_string()),
+///     search_target: Some("법령명".to_string()),
+///     law_type: Some("법률".to_string()),
+///     ..Default::default()
+/// };
+///
+/// let response = client.search(request).await?;
+///
+/// // Get detailed information for first result
+/// if let Some(laws) = &response.laws {
+///     if let Some(first_law) = laws.first() {
+///         let detail = client.get_detail(&first_law.law_id).await?;
+///         println!("Law: {}", detail.law_name);
+///
+///         // Get revision history
+///         let history = client.get_history(&first_law.law_id).await?;
+///         println!("Revisions: {}", history.revisions.len());
+///     }
+/// }
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Performance Optimization
+///
+/// ```no_run
+/// use warp::api::{ApiClientFactory, ApiType};
+/// use warp::api::client::ClientConfig;
+/// use warp::cache::CacheStore;
+/// use std::sync::Arc;
+///
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// // Configure with caching for better performance
+/// let cache = Arc::new(CacheStore::new("./cache")?);
+/// let config = ClientConfig {
+///     api_key: "your-api-key".to_string(),
+///     timeout: 60,
+///     max_retries: 5,
+///     cache: Some(cache),
+///     bypass_cache: false,
+///     ..Default::default()
+/// };
+///
+/// let client = ApiClientFactory::create(ApiType::Nlic, config)?;
+///
+/// // First request will hit the API
+/// // let response1 = client.search(request.clone()).await?;
+///
+/// // Second identical request will use cache
+/// // let response2 = client.search(request).await?;
+/// # Ok(())
+/// # }
+/// ```
 pub struct NlicClient {
     config: ClientConfig,
     http_client: Client,
 }
 
 impl NlicClient {
-    /// Create a new NLIC client with optimized HTTP client
+    /// Create a new NLIC client with optimized configuration
+    ///
+    /// Initializes a new client for the National Law Information Center API
+    /// with optimized HTTP client settings and performance configurations.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Client configuration including API key, timeout, retry settings, and caching options
+    ///
+    /// # Returns
+    ///
+    /// Returns a configured `NlicClient` ready for API requests.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use warp::api::nlic::NlicClient;
+    /// use warp::api::client::ClientConfig;
+    ///
+    /// let config = ClientConfig {
+    ///     api_key: "your-api-key".to_string(),
+    ///     timeout: 60,
+    ///     max_retries: 3,
+    ///     ..Default::default()
+    /// };
+    ///
+    /// let client = NlicClient::new(config);
+    /// ```
     pub fn new(config: ClientConfig) -> Self {
         // Use appropriate HTTP client based on benchmark mode
         let http_client = if config.benchmark_mode {
