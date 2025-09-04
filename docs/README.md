@@ -1,10 +1,12 @@
 # Warp Documentation
 
-This directory contains additional documentation for the Warp Korean Legal Information CLI.
+This directory contains additional documentation for the Warp Korean Legal
+Information CLI.
 
 ## Documentation Structure
 
-- **[API Documentation](https://pyhub-apps.github.io/warp/)** - Auto-generated rustdoc documentation
+- **[API Documentation](https://pyhub-apps.github.io/warp/)** - Auto-generated
+  rustdoc documentation
 - **Getting Started Guide** - Quick start guide for new users
 - **API Reference** - Comprehensive API reference with examples
 - **Configuration Guide** - Configuration options and best practices
@@ -52,7 +54,7 @@ cargo doc --no-deps --document-private-items --all-features
 
 Use the following patterns for rustdoc comments:
 
-```rust
+````rust
 /// Brief description of the item
 ///
 /// Longer description with more details about the functionality,
@@ -89,7 +91,7 @@ Use the following patterns for rustdoc comments:
 ///
 /// (Only for unsafe functions)
 /// This function is safe if...
-```
+````
 
 ### Korean Text Handling
 
@@ -108,7 +110,7 @@ When documenting Korean legal concepts:
 
 Always include working examples:
 
-```rust
+````rust
 /// # Examples
 ///
 /// ```no_run
@@ -122,7 +124,7 @@ Always include working examples:
 /// # Ok(())
 /// # }
 /// ```
-```
+````
 
 ## Documentation Quality Checklist
 

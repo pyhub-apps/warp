@@ -1,6 +1,7 @@
 # Korean Legal API Examples
 
-This directory contains comprehensive examples demonstrating how to use the Warp library to access Korean government legal databases.
+This directory contains comprehensive examples demonstrating how to use the Warp
+library to access Korean government legal databases.
 
 ## Overview
 
@@ -17,6 +18,7 @@ The examples show various aspects of using the Korean legal API clients:
 ### 1. API Usage Examples (`api_usage.rs`)
 
 Comprehensive example covering:
+
 - Basic NLIC (National Law Information Center) searches
 - Advanced search with filters and sorting
 - Multi-API searches across different databases
@@ -31,6 +33,7 @@ cargo run --example api_usage
 ### 2. Cache Usage Examples (`cache_usage.rs`)
 
 Advanced caching functionality:
+
 - Tiered caching strategies
 - Cache key generation
 - Cache invalidation patterns
@@ -276,8 +279,10 @@ When adding new examples:
 ## Support
 
 - **Documentation**: Run `cargo doc --open` for API documentation
-- **Issues**: Report issues at [GitHub Issues](https://github.com/pyhub-apps/warp/issues)
-- **Discussions**: Join discussions at [GitHub Discussions](https://github.com/pyhub-apps/warp/discussions)
+- **Issues**: Report issues at
+  [GitHub Issues](https://github.com/pyhub-apps/warp/issues)
+- **Discussions**: Join discussions at
+  [GitHub Discussions](https://github.com/pyhub-apps/warp/discussions)
 
 ## License
 
