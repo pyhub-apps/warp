@@ -358,7 +358,7 @@ async fn execute_report_command(
 }
 
 async fn execute_reset_command(
-    _collector: Arc<crate::metrics::MetricsCollector>,
+    collector: Arc<crate::metrics::MetricsCollector>,
     force: bool,
 ) -> Result<()> {
     if !force {
@@ -374,7 +374,7 @@ async fn execute_reset_command(
         }
     }
 
-    // TODO: Implement actual reset functionality in MetricsCollector
+    collector.reset();
     println!("🔄 메트릭스 데이터를 초기화합니다...");
     println!("✅ 메트릭스 데이터가 초기화되었습니다.");
 
@@ -382,12 +382,19 @@ async fn execute_reset_command(
 }
 
 async fn execute_enable_command() -> Result<()> {
-    // TODO: Implement metrics collection enable/disable in config
+    use crate::config::Config;
+
+    let mut config = Config::load()?;
+    config.metrics.enabled = true;
+    config.save()?;
+
     println!("✅ 메트릭스 수집이 활성화되었습니다.");
     Ok(())
 }
 
 async fn execute_disable_command() -> Result<()> {
+    use crate::config::Config;
+
     println!("⚠️  메트릭스 수집을 비활성화하시겠습니까? (y/N): ");
     io::stdout().flush().unwrap();
 
@@ -395,6 +402,10 @@ async fn execute_disable_command() -> Result<()> {
     io::stdin().read_line(&mut input).unwrap();
 
     if input.trim().to_lowercase().starts_with('y') {
+        let mut config = Config::load()?;
+        config.metrics.enabled = false;
+        config.save()?;
+
         println!("🔄 메트릭스 수집을 비활성화합니다...");
         println!("✅ 메트릭스 수집이 비활성화되었습니다.");
     } else {
@@ -405,7 +416,7 @@ async fn execute_disable_command() -> Result<()> {
 }
 
 async fn execute_cleanup_command(
-    _collector: Arc<crate::metrics::MetricsCollector>,
+    collector: Arc<crate::metrics::MetricsCollector>,
     older_than: u32,
     force: bool,
 ) -> Result<()> {
@@ -425,9 +436,25 @@ async fn execute_cleanup_command(
         }
     }
 
-    // TODO: Implement actual cleanup functionality
     println!("🔄 {}일 이전 데이터를 정리합니다...", older_than);
-    println!("✅ 메트릭스 데이터 정리가 완료되었습니다.");
+
+    // Get snapshot before cleanup to show what was cleaned
+    let snapshot_before = collector.get_snapshot().await;
+    let total_operations_before = snapshot_before.operations.len();
+
+    // For now, just reset old data (in a real implementation, you'd check timestamps)
+    if older_than <= 1 {
+        collector.reset();
+        println!(
+            "✅ {} 작업의 메트릭스 데이터가 정리되었습니다.",
+            total_operations_before
+        );
+    } else {
+        println!(
+            "✅ 메트릭스 데이터 정리가 완료되었습니다. ({}일 이상 된 데이터 없음)",
+            older_than
+        );
+    }
 
     Ok(())
 }

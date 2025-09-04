@@ -4,9 +4,9 @@
 //! provided by the warp library to search for legal documents, retrieve
 //! detailed information, and work with different data sources.
 
-use warp::api::{ApiClientFactory, ApiType};
-use warp::api::types::{UnifiedSearchRequest, SortOrder};
 use warp::api::client::ClientConfig;
+use warp::api::types::{SortOrder, UnifiedSearchRequest};
+use warp::api::{ApiClientFactory, ApiType};
 use warp::config::Config;
 use warp::error::{Result, WarpError};
 
@@ -47,7 +47,12 @@ async fn basic_nlic_search() -> Result<()> {
 
     if !response.items.is_empty() {
         for (i, item) in response.items.iter().enumerate() {
-            println!("{}. {} ({})", i + 1, item.title, item.law_no.as_deref().unwrap_or("N/A"));
+            println!(
+                "{}. {} ({})",
+                i + 1,
+                item.title,
+                item.law_no.as_deref().unwrap_or("N/A")
+            );
             if let Some(dept) = &item.department {
                 println!("   Department: {}", dept);
             }
@@ -91,10 +96,17 @@ async fn advanced_search_with_filters() -> Result<()> {
 
     let response = client.search(request).await?;
 
-    println!("Environmental protection laws found: {}", response.total_count);
+    println!(
+        "Environmental protection laws found: {}",
+        response.total_count
+    );
 
     for item in response.items.iter().take(3) {
-        println!("- {}: {}", item.law_no.as_deref().unwrap_or("N/A"), item.title);
+        println!(
+            "- {}: {}",
+            item.law_no.as_deref().unwrap_or("N/A"),
+            item.title
+        );
         if let Some(law_type) = &item.law_type {
             println!("  Type: {}", law_type);
         }
@@ -112,7 +124,11 @@ async fn multi_api_search() -> Result<()> {
 
     let apis = vec![
         (ApiType::Nlic, "National Laws", config.get_nlic_api_key()),
-        (ApiType::Elis, "Local Regulations", config.get_elis_api_key()),
+        (
+            ApiType::Elis,
+            "Local Regulations",
+            config.get_elis_api_key(),
+        ),
         (ApiType::Prec, "Court Precedents", config.get_prec_api_key()),
     ];
 
@@ -213,7 +229,8 @@ async fn detailed_document_retrieval() -> Result<()> {
             Ok(history) => {
                 println!("Revision History:");
                 for entry in history.entries.iter().take(3) {
-                    println!("  - {}: {}",
+                    println!(
+                        "  - {}: {}",
                         entry.revision_date,
                         entry.reason.as_deref().unwrap_or("No reason provided")
                     );
@@ -289,12 +306,20 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     // Run examples and handle errors gracefully
-    let examples: Vec<(&str, fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>)> = vec![
+    type ExampleFn =
+        fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send>>;
+    let examples: Vec<(&str, ExampleFn)> = vec![
         ("Basic Search", || Box::pin(basic_nlic_search())),
-        ("Advanced Search", || Box::pin(advanced_search_with_filters())),
+        ("Advanced Search", || {
+            Box::pin(advanced_search_with_filters())
+        }),
         ("Multi-API Search", || Box::pin(multi_api_search())),
-        ("Detailed Retrieval", || Box::pin(detailed_document_retrieval())),
-        ("Performance Optimization", || Box::pin(performance_optimization_example())),
+        ("Detailed Retrieval", || {
+            Box::pin(detailed_document_retrieval())
+        }),
+        ("Performance Optimization", || {
+            Box::pin(performance_optimization_example())
+        }),
     ];
 
     for (name, example_fn) in examples {

@@ -17,6 +17,10 @@ pub struct Config {
     /// Cache configuration
     #[serde(default)]
     pub cache: CacheConfig,
+
+    /// Metrics configuration
+    #[serde(default)]
+    pub metrics: MetricsConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -99,6 +103,36 @@ fn default_cache_max_size() -> u64 {
 
 fn default_cache_dir() -> Option<PathBuf> {
     dirs::cache_dir().map(|dir| dir.join("pyhub-warp"))
+}
+
+/// Metrics configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MetricsConfig {
+    /// Enable/disable metrics collection (default: true)
+    #[serde(default = "default_metrics_enabled")]
+    pub enabled: bool,
+
+    /// Maximum age of metrics data in days (default: 30)
+    #[serde(default = "default_metrics_retention_days")]
+    pub retention_days: u32,
+}
+
+impl Default for MetricsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_metrics_enabled(),
+            retention_days: default_metrics_retention_days(),
+        }
+    }
+}
+
+// Default value functions for metrics configuration
+fn default_metrics_enabled() -> bool {
+    true
+}
+
+fn default_metrics_retention_days() -> u32 {
+    30
 }
 
 impl CacheConfig {
