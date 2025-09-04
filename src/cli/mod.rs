@@ -93,6 +93,10 @@ pub enum Commands {
     #[command(alias = "m")]
     Metrics(args::MetricsArgs),
 
+    /// Manage search filter presets
+    #[command(alias = "f")]
+    Filter(args::FilterArgs),
+
     /// Show version information
     Version,
 
@@ -185,6 +189,7 @@ impl Cli {
             Commands::Metrics(args) => {
                 commands::metrics::execute(args, cli.format, cli.quiet, cli.verbose).await
             }
+            Commands::Filter(args) => commands::filter::execute(args).await,
             Commands::Version => {
                 commands::version::execute();
                 Ok(())

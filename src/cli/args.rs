@@ -308,6 +308,10 @@ pub struct SearchArgs {
     /// Minimum relevance score (0.0-1.0)
     #[arg(long, help = "Minimum relevance score filter (0.0-1.0)")]
     pub min_score: Option<f32>,
+
+    /// Use saved filter preset
+    #[arg(long, help = "Apply saved filter preset")]
+    pub filter: Option<String>,
 }
 
 /// Configuration command arguments
@@ -329,6 +333,13 @@ pub struct CacheArgs {
 pub struct MetricsArgs {
     #[command(subcommand)]
     pub command: MetricsCommand,
+}
+
+/// Filter preset management arguments
+#[derive(Args, Debug)]
+pub struct FilterArgs {
+    #[command(subcommand)]
+    pub command: FilterCommand,
 }
 
 #[derive(Subcommand, Debug)]
@@ -481,6 +492,78 @@ pub enum MetricsCommand {
 
         /// Force cleanup without confirmation
         #[arg(long, help = "Force cleanup without confirmation")]
+        force: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum FilterCommand {
+    /// Save a search filter preset
+    Save {
+        /// Preset name
+        name: String,
+
+        /// Search query
+        #[arg(long)]
+        query: Option<String>,
+
+        /// Law type filter
+        #[arg(long)]
+        law_type: Option<String>,
+
+        /// Department filter
+        #[arg(long)]
+        department: Option<String>,
+
+        /// Status filter
+        #[arg(long)]
+        status: Option<String>,
+
+        /// Region filter
+        #[arg(long)]
+        region: Option<String>,
+
+        /// Date from
+        #[arg(long)]
+        from: Option<String>,
+
+        /// Date to
+        #[arg(long)]
+        to: Option<String>,
+
+        /// Recent days
+        #[arg(long)]
+        recent_days: Option<u32>,
+
+        /// Enable regex
+        #[arg(long)]
+        regex: bool,
+
+        /// Search only in title
+        #[arg(long)]
+        title_only: bool,
+
+        /// Minimum score
+        #[arg(long)]
+        min_score: Option<f32>,
+    },
+
+    /// List saved filter presets
+    List,
+
+    /// Show details of a specific preset
+    Show {
+        /// Preset name
+        name: String,
+    },
+
+    /// Delete a filter preset
+    Delete {
+        /// Preset name
+        name: String,
+
+        /// Force delete without confirmation
+        #[arg(long)]
         force: bool,
     },
 }

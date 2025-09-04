@@ -1,6 +1,7 @@
 pub mod admrule;
 pub mod cache;
 pub mod config;
+pub mod filter;
 pub mod help;
 pub mod interpretation;
 pub mod law;

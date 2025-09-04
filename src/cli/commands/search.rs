@@ -45,7 +45,8 @@ pub async fn execute(
         return execute_parallel_search(args, format, quiet, verbose, api_types, config).await;
     }
 
-    // Create search request with filters
+    // Apply filter preset if specified and create search request
+    let args = apply_filter_preset(args, &config)?;
     let request = create_search_request(&args);
 
     // Execute searches in parallel
@@ -429,7 +430,8 @@ async fn execute_parallel_search(
         batch_delay: Duration::from_millis(100),
     };
 
-    // Create search request with filters
+    // Apply filter preset if specified and create search request
+    let args = apply_filter_preset(args, &config)?;
     let request = create_search_request(&args);
 
     // Create API clients with optimization
@@ -609,4 +611,62 @@ fn create_search_request(args: &SearchArgs) -> UnifiedSearchRequest {
         sort: sort_order,
         extras,
     }
+}
+
+/// Apply filter preset to SearchArgs if specified
+fn apply_filter_preset(mut args: SearchArgs, config: &Config) -> Result<SearchArgs> {
+    if let Some(ref preset_name) = args.filter {
+        let preset = config.filter_presets.get(preset_name).ok_or_else(|| {
+            WarpError::InvalidInput(format!("필터 프리셋 '{}'을 찾을 수 없습니다", preset_name))
+        })?;
+
+        // Apply preset values only if the corresponding arg is not set
+        if args.query.is_empty() {
+            if let Some(ref query) = preset.query {
+                args.query = query.clone();
+            }
+        }
+
+        if args.law_type.is_none() {
+            args.law_type = preset.law_type.clone();
+        }
+
+        if args.department.is_none() {
+            args.department = preset.department.clone();
+        }
+
+        if args.status.is_none() {
+            args.status = preset.status.clone();
+        }
+
+        if args.region.is_none() {
+            args.region = preset.region.clone();
+        }
+
+        if args.from.is_none() {
+            args.from = preset.from.clone();
+        }
+
+        if args.to.is_none() {
+            args.to = preset.to.clone();
+        }
+
+        if args.recent_days.is_none() {
+            args.recent_days = preset.recent_days;
+        }
+
+        if !args.regex {
+            args.regex = preset.regex;
+        }
+
+        if !args.title_only {
+            args.title_only = preset.title_only;
+        }
+
+        if args.min_score.is_none() {
+            args.min_score = preset.min_score;
+        }
+    }
+
+    Ok(args)
 }

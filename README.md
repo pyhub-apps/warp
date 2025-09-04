@@ -12,9 +12,12 @@
   - 행정규칙 (ADMRUL)
   - 법령해석례 (EXPC)
 - 🔍 **통합 검색**: 모든 API를 동시에 검색하는 병렬 처리
+- 🎯 **고급 필터링**: 법령 종류, 부처, 날짜, 상태별 정밀 검색
+- 📋 **필터 프리셋**: 자주 사용하는 검색 조건을 저장하고 재사용
 - 🎨 **6가지 출력 형식**: Table, JSON, Markdown, CSV, HTML, HtmlSimple
 - ⚡ **비동기 처리**: Tokio 기반 병렬 API 호출
 - 🔄 **재시도 로직**: 지수 백오프를 통한 안정적인 API 호출
+- 📊 **성능 모니터링**: 실시간 메트릭스 대시보드로 성능 추적
 - 🔒 **보안**: API 키를 안전하게 관리 (파일 권한 0600)
 
 ## 📚 문서
@@ -177,6 +180,62 @@ warp search "민법" --source nlic,elis
 
 # 출력 형식 지정
 warp search "도로교통법" --format markdown
+```
+
+#### 🎯 고급 필터링 검색
+
+```bash
+# 법령 종류별 필터링
+warp search "민법" --law-type 법률,시행령,시행규칙
+
+# 부처별 필터링
+warp search "개인정보" --department 개인정보보호위원회,법무부
+
+# 날짜 범위 필터링
+warp search "데이터" --from 20230101 --to 20241231
+warp search "개인정보" --recent-days 30
+
+# 상태별 필터링
+warp search "민법" --status 시행중,폐지
+
+# 정규표현식 검색
+warp search --regex "개인정보.*보호" --title-only
+
+# 최소 관련도 점수
+warp search "민법" --min-score 0.8
+
+# 복합 필터 조합
+warp search "개인정보" \
+    --law-type 법률 \
+    --department 개인정보보호위원회 \
+    --recent-days 30 \
+    --status 시행중
+```
+
+#### 📋 필터 프리셋 관리
+
+```bash
+# 필터 프리셋 저장
+warp filter save privacy-laws \
+    --query "개인정보" \
+    --law-type 법률 \
+    --department 개인정보보호위원회 \
+    --status 시행중
+
+# 저장된 프리셋 목록
+warp filter list
+
+# 프리셋 상세 정보
+warp filter show privacy-laws
+
+# 프리셋으로 검색하기
+warp search --filter privacy-laws
+
+# 프리셋과 추가 옵션 조합
+warp search --filter privacy-laws --recent-days 7
+
+# 프리셋 삭제
+warp filter delete privacy-laws
 ```
 
 ### 출력 형식

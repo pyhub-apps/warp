@@ -1,7 +1,8 @@
 use crate::error::{Result, WarpError};
-use chrono::Duration;
+use chrono::{Duration, Utc};
 use dirs;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -21,6 +22,10 @@ pub struct Config {
     /// Metrics configuration
     #[serde(default)]
     pub metrics: MetricsConfig,
+
+    /// Filter presets
+    #[serde(default)]
+    pub filter_presets: HashMap<String, FilterPreset>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -133,6 +138,52 @@ fn default_metrics_enabled() -> bool {
 
 fn default_metrics_retention_days() -> u32 {
     30
+}
+
+/// Filter preset configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilterPreset {
+    /// Preset name
+    pub name: String,
+
+    /// Search query
+    pub query: Option<String>,
+
+    /// Law type filter
+    pub law_type: Option<String>,
+
+    /// Department filter
+    pub department: Option<String>,
+
+    /// Status filter
+    pub status: Option<String>,
+
+    /// Region filter
+    pub region: Option<String>,
+
+    /// Date from
+    pub from: Option<String>,
+
+    /// Date to
+    pub to: Option<String>,
+
+    /// Recent days
+    pub recent_days: Option<u32>,
+
+    /// Enable regex
+    #[serde(default)]
+    pub regex: bool,
+
+    /// Search only in title
+    #[serde(default)]
+    pub title_only: bool,
+
+    /// Minimum score
+    pub min_score: Option<f32>,
+
+    /// Creation timestamp
+    #[serde(default = "Utc::now")]
+    pub created_at: chrono::DateTime<Utc>,
 }
 
 impl CacheConfig {
