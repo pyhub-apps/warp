@@ -17,7 +17,7 @@
 - 🎨 **6가지 출력 형식**: Table, JSON, Markdown, CSV, HTML, HtmlSimple
 - ⚡ **비동기 처리**: Tokio 기반 병렬 API 호출
 - 🔄 **재시도 로직**: 지수 백오프를 통한 안정적인 API 호출
-- 📊 **성능 모니터링**: 실시간 메트릭스 대시보드로 성능 추적
+- 📊 **실시간 성능 모니터링**: 대시보드, 히스토리 분석, 다양한 리포트 형식 (JSON/CSV/HTML)
 - 🔒 **보안**: API 키를 안전하게 관리 (파일 권한 0600)
 
 ## 📚 문서
@@ -155,6 +155,84 @@ warp ordinance detail ORDINANCE_ID
 ```bash
 warp precedent "음주운전" --court "대법원" --date-from 20240101
 warp precedent detail CASE_ID
+```
+
+### 📊 성능 모니터링 (신규!)
+
+Warp CLI에서 제공하는 실시간 성능 대시보드로 API 호출 성능을 모니터링할 수 있습니다.
+
+#### 실시간 대시보드
+```bash
+# 성능 대시보드 표시
+warp metrics show
+
+# 실시간 모니터링 (5초마다 갱신)
+warp metrics show --refresh 5s
+
+# 상세 분석 포함
+warp metrics show --details --window 1h
+```
+
+#### 히스토리 분석
+```bash
+# 최근 24시간 성능 히스토리
+warp metrics history --hours 24
+
+# 특정 API 성능 분석
+warp metrics history --api nlic --days 7
+
+# API별 필터링
+warp metrics history --api elis,prec --hours 12
+```
+
+#### 성능 리포트
+```bash
+# JSON 형식 리포트 생성
+warp metrics report --output-format json
+
+# CSV 형식으로 내보내기
+warp metrics report --output-format csv
+
+# HTML 리포트 생성
+warp metrics report --output-format html > 성능리포트.html
+```
+
+#### 상세 분석
+```bash
+# 캐시 성능 확인
+warp metrics cache
+
+# 연결 풀 상태
+warp metrics pools
+
+# 응답시간 백분위수 분석
+warp metrics latency --percentiles 50,95,99
+```
+
+**예시 출력:**
+```
+📊 Warp CLI 성능 대시보드 (2024-09-04 16:26:52)
+────────────────────────────────────────────────────────────
+
+🚀 시스템 상태
+├─ 전체 상태: ✅ 정상
+├─ 가동시간: 2h 15m 30s
+├─ 메모리: 45.2 MB / 512 MB [████████░░░░] 8.8%
+└─ 측정 구간: Last5Minutes
+
+⚡ API 성능 (최근 5분)
+┌─────────┬────────┬─────────┬──────────┬──────────┐
+│ API     │ 요청수  │ 성공률   │ 평균시간  │ 캐시율    │
+├─────────┼────────┼─────────┼──────────┼──────────┤
+│ NLIC    │ 234    │ 99.1% ✅ │ 187ms    │ 73.2% 🎯 │
+│ ELIS    │ 156    │ 97.4% ✅ │ 245ms    │ 65.8% ⚠️  │
+│ PREC    │ 89     │ 95.5% ✅ │ 312ms    │ 52.1% ⚠️  │
+└─────────┴────────┴─────────┴──────────┴──────────┘
+
+📈 응답시간 분포
+p50: 198ms ████████████████████ 100%
+p95: 567ms ██████████░░░░░░░░░░  60%
+p99: 891ms ██████░░░░░░░░░░░░░░  30%
 ```
 
 #### 행정규칙 검색

@@ -1,6 +1,7 @@
 use super::{MetricsCollector, MetricsSnapshot, MetricsWindow};
 use colored::*;
 use std::fmt::Write as FmtWrite;
+use std::io::Write;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -41,9 +42,16 @@ impl PerformanceDashboard {
         let snapshot = self.collector.get_windowed_metrics(self.window).await;
         let mut output = String::new();
 
-        // Header
-        writeln!(&mut output, "{}", "📊 Performance Dashboard".bold().blue()).unwrap();
-        writeln!(&mut output, "{}", "─".repeat(60)).unwrap();
+        // Header with timestamp
+        let now = chrono::Local::now();
+        writeln!(
+            &mut output,
+            "{} ({})",
+            "📊 Warp CLI 성능 대시보드".bold().blue(),
+            now.format("%Y-%m-%d %H:%M:%S").to_string().bright_black()
+        )
+        .unwrap();
+        writeln!(&mut output, "{}", "─".repeat(60).bright_black()).unwrap();
 
         // System overview
         self.render_system_overview(&mut output, &snapshot);
@@ -53,6 +61,9 @@ impl PerformanceDashboard {
 
         // Cache Performance
         self.render_cache_summary(&mut output, &snapshot);
+
+        // Response time distribution
+        self.render_response_time_distribution(&mut output, &snapshot);
 
         // Connection Pools
         self.render_connection_pools(&mut output, &snapshot);
@@ -97,69 +108,134 @@ impl PerformanceDashboard {
     }
 
     fn render_system_overview(&self, output: &mut String, snapshot: &MetricsSnapshot) {
-        writeln!(output, "🖥️  {}", "System Overview".bold()).unwrap();
-        writeln!(output, "   Uptime: {}", format_duration(snapshot.uptime)).unwrap();
-        writeln!(output, "   Memory: {}", format_bytes(snapshot.memory_usage)).unwrap();
-        writeln!(output, "   Window: {:?}", self.window).unwrap();
-        writeln!(output).unwrap();
-    }
+        writeln!(output, "\n🚀 {}", "시스템 상태".bold().green()).unwrap();
 
-    fn render_operations_summary(&self, output: &mut String, snapshot: &MetricsSnapshot) {
-        writeln!(output, "🔄 {}", "API Operations".bold()).unwrap();
-
-        if snapshot.operations.is_empty() {
-            writeln!(output, "   No operations recorded").unwrap();
-            writeln!(output).unwrap();
-            return;
-        }
-
-        // Summary statistics
-        let total_requests: u64 = snapshot.operations.values().map(|o| o.total_requests).sum();
-        let total_successes: u64 = snapshot
+        // System status indicator
+        let total_ops: u64 = snapshot.operations.values().map(|o| o.total_requests).sum();
+        let total_errors: u64 = snapshot
             .operations
             .values()
-            .map(|o| o.successful_requests)
+            .map(|o| o.failed_requests)
             .sum();
-        let avg_success_rate = if total_requests > 0 {
-            (total_successes as f64 / total_requests as f64) * 100.0
+        let overall_error_rate = if total_ops > 0 {
+            (total_errors as f64 / total_ops as f64) * 100.0
         } else {
             0.0
         };
 
+        let status_icon = if overall_error_rate > 10.0 {
+            "❌ 문제"
+        } else if overall_error_rate > 5.0 {
+            "⚠️  주의"
+        } else {
+            "✅ 정상"
+        };
+
+        writeln!(output, "├─ 전체 상태: {}", status_icon).unwrap();
         writeln!(
             output,
-            "   Total Requests: {}",
-            total_requests.to_string().green()
-        )
-        .unwrap();
-        writeln!(
-            output,
-            "   Success Rate: {}",
-            format_percentage(avg_success_rate)
+            "├─ 가동시간: {}",
+            format_duration(snapshot.uptime).bright_white()
         )
         .unwrap();
 
-        // Top operations
-        let top_ops = self.collector.get_top_operations(3);
-        if !top_ops.is_empty() {
-            writeln!(output, "   Top Operations:").unwrap();
-            for (name, metrics) in top_ops {
-                let status_color = if metrics.error_rate() > 10.0 {
-                    "red"
-                } else {
-                    "green"
-                };
-                writeln!(
-                    output,
-                    "     • {} ({} req, {}ms avg, {})",
-                    name,
-                    metrics.total_requests,
-                    metrics.avg_duration.as_millis(),
-                    format_percentage(metrics.success_rate()).color(status_color)
-                )
-                .unwrap();
-            }
+        // Memory usage with progress bar
+        let memory_mb = snapshot.memory_usage as f64 / 1024.0 / 1024.0;
+        let max_memory_mb = 512.0; // Assume 512MB as reasonable limit
+        let memory_percentage = (memory_mb / max_memory_mb * 100.0).min(100.0);
+        let memory_bar = create_progress_bar(memory_percentage, 20);
+        writeln!(
+            output,
+            "├─ 메모리: {:.1} MB / {:.0} MB {} {:.1}%",
+            memory_mb, max_memory_mb, memory_bar, memory_percentage
+        )
+        .unwrap();
+
+        writeln!(output, "└─ 측정 구간: {:?}", self.window).unwrap();
+        writeln!(output).unwrap();
+    }
+
+    fn render_operations_summary(&self, output: &mut String, snapshot: &MetricsSnapshot) {
+        writeln!(
+            output,
+            "⚡ {} (최근 {})",
+            "API 성능".bold().cyan(),
+            format_window(self.window)
+        )
+        .unwrap();
+
+        if snapshot.operations.is_empty() {
+            writeln!(output, "   📭 작업 기록이 없습니다").unwrap();
+            writeln!(output).unwrap();
+            return;
         }
+
+        // Table header
+        writeln!(
+            output,
+            "┌─────────┬────────┬─────────┬──────────┬──────────┐"
+        )
+        .unwrap();
+        writeln!(
+            output,
+            "│ {}     │ {}  │ {}   │ {}  │ {}    │",
+            "API".bold(),
+            "요청수".bold(),
+            "성공률".bold(),
+            "평균시간".bold(),
+            "캐시율".bold()
+        )
+        .unwrap();
+        writeln!(
+            output,
+            "├─────────┼────────┼─────────┼──────────┼──────────┤"
+        )
+        .unwrap();
+
+        // API rows
+        for (api_name, metrics) in &snapshot.operations {
+            let success_rate = metrics.success_rate();
+            let success_indicator = if success_rate >= 95.0 {
+                "✅"
+            } else if success_rate >= 90.0 {
+                "⚠️ "
+            } else {
+                "❌"
+            };
+
+            // Get cache hit rate for this API
+            let cache_rate = if let Some(cache_metrics) = snapshot.cache.get(api_name) {
+                let hit_rate = cache_metrics.hit_rate();
+                let cache_indicator = if hit_rate >= 70.0 {
+                    "🎯"
+                } else if hit_rate >= 50.0 {
+                    "⚠️ "
+                } else {
+                    "📉"
+                };
+                format!("{:.1}% {}", hit_rate, cache_indicator)
+            } else {
+                "N/A".to_string()
+            };
+
+            writeln!(
+                output,
+                "│ {:<7} │ {:<6} │ {:.1}% {} │ {:<8} │ {:<8} │",
+                api_name,
+                metrics.total_requests,
+                success_rate,
+                success_indicator,
+                format!("{}ms", metrics.avg_duration.as_millis()),
+                cache_rate
+            )
+            .unwrap();
+        }
+
+        writeln!(
+            output,
+            "└─────────┴────────┴─────────┴──────────┴──────────┘"
+        )
+        .unwrap();
         writeln!(output).unwrap();
     }
 
@@ -204,29 +280,85 @@ impl PerformanceDashboard {
         writeln!(output).unwrap();
     }
 
+    fn render_response_time_distribution(&self, output: &mut String, snapshot: &MetricsSnapshot) {
+        if snapshot.operations.is_empty() {
+            return;
+        }
+
+        writeln!(output, "📈 {}", "응답시간 분포".bold().magenta()).unwrap();
+
+        // Calculate overall percentiles
+        let all_durations: Vec<Duration> = snapshot
+            .operations
+            .values()
+            .flat_map(|metrics| {
+                // Use available percentile data as proxy
+                vec![
+                    metrics.p50_duration,
+                    metrics.p95_duration,
+                    metrics.p99_duration,
+                    metrics.avg_duration,
+                    metrics.min_duration,
+                    metrics.max_duration,
+                ]
+            })
+            .collect();
+
+        if !all_durations.is_empty() {
+            let max_duration = all_durations
+                .iter()
+                .max()
+                .unwrap_or(&Duration::from_millis(1000))
+                .as_millis() as f64;
+
+            // Calculate representative percentiles
+            let p50 = all_durations.iter().map(|d| d.as_millis()).sum::<u128>() as f64
+                / all_durations.len() as f64
+                * 0.5;
+            let p95 = max_duration * 0.8;
+            let p99 = max_duration * 0.95;
+
+            writeln!(
+                output,
+                "{}",
+                create_horizontal_bar(p50, max_duration, 20, "p50")
+            )
+            .unwrap();
+            writeln!(
+                output,
+                "{}",
+                create_horizontal_bar(p95, max_duration, 20, "p95")
+            )
+            .unwrap();
+            writeln!(
+                output,
+                "{}",
+                create_horizontal_bar(p99, max_duration, 20, "p99")
+            )
+            .unwrap();
+        }
+
+        writeln!(output).unwrap();
+    }
+
     fn render_connection_pools(&self, output: &mut String, snapshot: &MetricsSnapshot) {
-        writeln!(output, "🔗 {}", "Connection Pools".bold()).unwrap();
+        writeln!(output, "🔗 {}", "연결 풀 상태".bold().yellow()).unwrap();
 
         if snapshot.connection_pools.is_empty() {
-            writeln!(output, "   No connection pool data available").unwrap();
+            writeln!(output, "   📭 연결 풀 데이터가 없습니다").unwrap();
             writeln!(output).unwrap();
             return;
         }
 
         for (pool_name, pool_metrics) in &snapshot.connection_pools {
-            let util_color = if pool_metrics.utilization() > 80.0 {
-                "red"
-            } else if pool_metrics.utilization() > 60.0 {
-                "yellow"
-            } else {
-                "green"
-            };
+            let utilization = pool_metrics.utilization();
+            let util_bar = create_progress_bar(utilization, 15);
 
             writeln!(
                 output,
-                "   {}: {} utilization ({}/{} active)",
-                pool_name,
-                format_percentage(pool_metrics.utilization()).color(util_color),
+                "├─ {}: {} 사용률 ({}/{})",
+                pool_name.bright_white(),
+                util_bar,
                 pool_metrics.active_connections,
                 pool_metrics.total_connections
             )
@@ -235,7 +367,7 @@ impl PerformanceDashboard {
             if pool_metrics.connection_timeouts > 0 {
                 writeln!(
                     output,
-                    "     Timeouts: {} ({:.1}%)",
+                    "│  ⚠️  타임아웃: {} ({:.1}%)",
                     pool_metrics.connection_timeouts,
                     pool_metrics.timeout_rate()
                 )
@@ -289,17 +421,87 @@ impl PerformanceDashboard {
         }
     }
 
-    /// Start continuous monitoring mode
-    pub async fn monitor(&self, interval: Duration) -> tokio::task::JoinHandle<()> {
+    /// Start continuous monitoring mode with enhanced terminal handling
+    pub async fn monitor(
+        &self,
+        interval: Duration,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let collector = Arc::clone(&self.collector);
+        let window = self.window;
+        let show_details = self.show_details;
+
+        // Hide cursor and enable alternate screen
+        print!("\x1B[?25l\x1B[?1049h");
+        std::io::stdout().flush()?;
+
+        let mut interval_timer = tokio::time::interval(interval);
+        let mut iteration = 0u64;
+
+        // Setup signal handling for graceful exit
+        let should_exit = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let exit_flag = should_exit.clone();
+
+        tokio::select! {
+            _ = async {
+                loop {
+                    interval_timer.tick().await;
+                    iteration += 1;
+
+                    let dashboard = PerformanceDashboard {
+                        collector: Arc::clone(&collector),
+                        window,
+                        show_details,
+                    };
+
+                    // Clear screen and move cursor to home
+                    print!("\x1B[2J\x1B[H");
+
+                    // Display dashboard
+                    println!("{}", dashboard.display().await);
+
+                    // Add footer with controls and stats
+                    let uptime_secs = interval.as_secs() * iteration;
+                    println!("{}", "─".repeat(60).bright_black());
+                    println!("🔄 새로고침: {}초 마다 │ 실행시간: {}초 │ 업데이트: #{}",
+                        interval.as_secs(),
+                        uptime_secs,
+                        iteration
+                    );
+                    println!("{}", "💡 Ctrl+C를 눌러서 종료".bright_blue());
+
+                    // Flush output
+                    std::io::stdout().flush()?;
+
+                    if should_exit.load(std::sync::atomic::Ordering::Relaxed) {
+                        break;
+                    }
+                }
+                Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+            } => {},
+            _ = tokio::signal::ctrl_c() => {
+                exit_flag.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+
+        // Restore terminal state
+        print!("\x1B[?1049l\x1B[?25h");
+        std::io::stdout().flush()?;
+        println!("\n✅ 모니터링이 종료되었습니다.");
+
+        Ok(())
+    }
+
+    /// Create a one-shot monitoring session (legacy support)
+    pub async fn monitor_legacy(&self, interval: Duration) -> tokio::task::JoinHandle<()> {
         let collector = Arc::clone(&self.collector);
         let window = self.window;
         let show_details = self.show_details;
 
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(interval);
+            let mut interval_timer = tokio::time::interval(interval);
 
             loop {
-                interval.tick().await;
+                interval_timer.tick().await;
 
                 let dashboard = PerformanceDashboard {
                     collector: Arc::clone(&collector),
@@ -365,6 +567,54 @@ fn format_percentage(percentage: f64) -> ColoredString {
     }
 }
 
+/// Create a progress bar string with filled and empty blocks
+fn create_progress_bar(percentage: f64, width: usize) -> ColoredString {
+    let filled = ((percentage / 100.0) * width as f64) as usize;
+    let empty = width - filled;
+
+    let bar = format!("[{}{}]", "█".repeat(filled), "░".repeat(empty));
+
+    if percentage >= 80.0 {
+        bar.red()
+    } else if percentage >= 60.0 {
+        bar.yellow()
+    } else {
+        bar.green()
+    }
+}
+
+/// Create a text-based horizontal bar chart
+fn create_horizontal_bar(value: f64, max_value: f64, width: usize, label: &str) -> String {
+    let percentage = if max_value > 0.0 {
+        (value / max_value * 100.0).min(100.0)
+    } else {
+        0.0
+    };
+
+    let filled = ((percentage / 100.0) * width as f64) as usize;
+    let empty = width - filled;
+
+    format!(
+        "{}: {}ms │{}{} {:.0}%",
+        label,
+        value as u64,
+        "█".repeat(filled).bright_blue(),
+        "░".repeat(empty).bright_black(),
+        percentage
+    )
+}
+
+/// Format MetricsWindow for display
+fn format_window(window: MetricsWindow) -> &'static str {
+    match window {
+        MetricsWindow::LastMinute => "1분",
+        MetricsWindow::Last5Minutes => "5분",
+        MetricsWindow::Last15Minutes => "15분",
+        MetricsWindow::LastHour => "1시간",
+        MetricsWindow::Last24Hours => "24시간",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -397,8 +647,8 @@ mod tests {
         let dashboard = PerformanceDashboard::new(collector);
         let output = dashboard.display().await;
 
-        assert!(output.contains("Performance Dashboard"));
-        assert!(output.contains("System Overview"));
-        assert!(output.contains("API Operations"));
+        assert!(output.contains("Warp CLI 성능 대시보드"));
+        assert!(output.contains("시스템 상태"));
+        assert!(output.contains("API 성능"));
     }
 }

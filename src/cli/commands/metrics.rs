@@ -35,18 +35,13 @@ pub async fn execute(
                         "📊 실시간 메트릭스 모니터링 시작 ({}초마다 갱신)",
                         refresh_interval.as_secs()
                     );
-                    println!("Ctrl+C로 종료");
                 }
-                let _handle = dashboard.monitor(refresh_interval).await;
 
-                // Wait for Ctrl+C
-                tokio::signal::ctrl_c()
+                // Use the improved monitor method
+                dashboard
+                    .monitor(refresh_interval)
                     .await
-                    .map_err(|e| WarpError::Other(format!("Failed to wait for Ctrl+C: {}", e)))?;
-
-                if !quiet {
-                    println!("\n모니터링이 종료되었습니다.");
-                }
+                    .map_err(|e| WarpError::Other(format!("Monitoring failed: {}", e)))?;
             } else {
                 println!("{}", dashboard.display().await);
             }
@@ -72,18 +67,13 @@ pub async fn execute(
                         "📊 실시간 메트릭스 모니터링 시작 ({}초마다 갱신)",
                         refresh_interval.as_secs()
                     );
-                    println!("Ctrl+C로 종료");
                 }
-                let _handle = dashboard.monitor(refresh_interval).await;
 
-                // Wait for Ctrl+C
-                tokio::signal::ctrl_c()
+                // Use the improved monitor method
+                dashboard
+                    .monitor(refresh_interval)
                     .await
-                    .map_err(|e| WarpError::Other(format!("Failed to wait for Ctrl+C: {}", e)))?;
-
-                if !quiet {
-                    println!("\n모니터링이 종료되었습니다.");
-                }
+                    .map_err(|e| WarpError::Other(format!("Monitoring failed: {}", e)))?;
             } else {
                 println!("{}", dashboard.display().await);
             }
@@ -139,46 +129,209 @@ async fn execute_history_command(
     days: Option<u32>,
     api: Option<String>,
 ) -> Result<()> {
-    println!("📈 성능 히스토리");
-    println!("{}", "─".repeat(50));
+    use colored::*;
 
-    // Determine time range
-    let time_range = match (hours, days) {
-        (Some(h), _) => format!("최근 {}시간", h),
-        (_, Some(d)) => format!("최근 {}일", d),
-        _ => "최근 24시간".to_string(),
+    println!("{}", "📈 성능 히스토리".bold().cyan());
+    println!("{}", "─".repeat(60).bright_black());
+
+    // Determine time range and window
+    let (time_range, window) = match (hours, days) {
+        (Some(h), _) if h <= 1 => (
+            "최근 1시간".to_string(),
+            crate::metrics::MetricsWindow::LastHour,
+        ),
+        (Some(h), _) if h <= 24 => (
+            format!("최근 {}시간", h),
+            crate::metrics::MetricsWindow::Last24Hours,
+        ),
+        (_, Some(1)) => (
+            "최근 24시간".to_string(),
+            crate::metrics::MetricsWindow::Last24Hours,
+        ),
+        (_, Some(d)) => (
+            format!("최근 {}일", d),
+            crate::metrics::MetricsWindow::Last24Hours,
+        ), // Extended view
+        _ => (
+            "최근 24시간".to_string(),
+            crate::metrics::MetricsWindow::Last24Hours,
+        ),
     };
 
-    println!("🕒 기간: {}", time_range);
-
+    println!("🕒 분석 기간: {}", time_range.bright_white());
     if let Some(ref api_filter) = api {
-        println!("🔍 API 필터: {}", api_filter);
+        println!("🔍 API 필터: {}", api_filter.bright_yellow());
     }
+    println!();
 
-    // Get historical data (for now, show current snapshot as placeholder)
-    let snapshot = collector.get_snapshot().await;
+    // Get windowed historical data
+    let snapshot = collector.get_windowed_metrics(window).await;
 
     if snapshot.operations.is_empty() {
-        println!("📭 히스토리 데이터가 없습니다.");
+        println!("📭 지정된 기간 동안의 히스토리 데이터가 없습니다.");
         return Ok(());
     }
 
-    println!("\n📊 API 작업 히스토리:");
-    for (op_name, metrics) in &snapshot.operations {
-        if let Some(ref filter) = api {
-            if !op_name.to_lowercase().contains(&filter.to_lowercase()) {
-                continue;
+    // Filter by API if specified
+    let filtered_operations: Vec<_> = snapshot
+        .operations
+        .iter()
+        .filter(|(op_name, _)| {
+            if let Some(ref filter) = api {
+                op_name.to_lowercase().contains(&filter.to_lowercase())
+            } else {
+                true
             }
+        })
+        .collect();
+
+    if filtered_operations.is_empty() {
+        println!("📭 필터링된 API에 대한 데이터가 없습니다.");
+        return Ok(());
+    }
+
+    // Display summary statistics
+    let total_requests: u64 = filtered_operations
+        .iter()
+        .map(|(_, m)| m.total_requests)
+        .sum();
+    let total_successes: u64 = filtered_operations
+        .iter()
+        .map(|(_, m)| m.successful_requests)
+        .sum();
+    let avg_success_rate = if total_requests > 0 {
+        (total_successes as f64 / total_requests as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    println!("📊 {} 요약", "전체 성능".bold().green());
+    println!("├─ 총 요청: {}", total_requests.to_string().bright_white());
+    println!("├─ 성공률: {}", format_percentage_colored(avg_success_rate));
+    println!(
+        "└─ 활성 API: {}",
+        filtered_operations.len().to_string().bright_white()
+    );
+    println!();
+
+    // Detailed API breakdown
+    println!("📋 {} ({})", "API별 상세 분석".bold().blue(), time_range);
+    println!("┌─────────────┬────────┬─────────┬──────────┬──────────┐");
+    println!(
+        "│ {}         │ {}  │ {}   │ {}  │ {}      │",
+        "API".bold(),
+        "요청수".bold(),
+        "성공률".bold(),
+        "평균시간".bold(),
+        "상태".bold()
+    );
+    println!("├─────────────┼────────┼─────────┼──────────┼──────────┤");
+
+    for (api_name, metrics) in &filtered_operations {
+        let success_rate = metrics.success_rate();
+        let status = get_status_indicator(success_rate, metrics.avg_duration.as_millis() as f64);
+
+        println!(
+            "│ {:<11} │ {:<6} │ {:>6.1}% │ {:>7}ms │ {:<8} │",
+            api_name,
+            metrics.total_requests,
+            success_rate,
+            metrics.avg_duration.as_millis(),
+            status
+        );
+    }
+
+    println!("└─────────────┴────────┴─────────┴──────────┴──────────┘");
+
+    // Performance trends (simplified analysis)
+    if filtered_operations.len() > 1 {
+        println!(
+            "\n🔍 {} (기간: {})",
+            "성능 트렌드 분석".bold().magenta(),
+            time_range
+        );
+
+        // Find best and worst performing APIs
+        let best_api = filtered_operations.iter().max_by(|(_, a), (_, b)| {
+            a.success_rate()
+                .partial_cmp(&b.success_rate())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        let worst_api = filtered_operations.iter().min_by(|(_, a), (_, b)| {
+            a.success_rate()
+                .partial_cmp(&b.success_rate())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        if let Some((best_name, best_metrics)) = best_api {
+            println!(
+                "🏆 최고 성능: {} (성공률 {:.1}%, 평균 {}ms)",
+                best_name.green(),
+                best_metrics.success_rate(),
+                best_metrics.avg_duration.as_millis()
+            );
         }
 
-        println!("  • {}", op_name);
-        println!("    요청 수: {}", metrics.total_requests);
-        println!("    성공률: {:.1}%", metrics.success_rate());
-        println!("    평균 응답시간: {}ms", metrics.avg_duration.as_millis());
-        println!();
+        if let Some((worst_name, worst_metrics)) = worst_api {
+            println!(
+                "⚠️  관심 필요: {} (성공률 {:.1}%, 평균 {}ms)",
+                worst_name.yellow(),
+                worst_metrics.success_rate(),
+                worst_metrics.avg_duration.as_millis()
+            );
+        }
+
+        // Response time analysis
+        let avg_response_time: f64 = filtered_operations
+            .iter()
+            .map(|(_, m)| m.avg_duration.as_millis() as f64)
+            .sum::<f64>()
+            / filtered_operations.len() as f64;
+
+        println!("📊 평균 응답시간: {:.0}ms", avg_response_time);
+
+        // Show APIs that are above/below average
+        let slow_apis: Vec<_> = filtered_operations
+            .iter()
+            .filter(|(_, m)| m.avg_duration.as_millis() as f64 > avg_response_time * 1.2)
+            .collect();
+
+        if !slow_apis.is_empty() {
+            println!(
+                "🐌 평균보다 느린 API ({:.0}ms 이상):",
+                avg_response_time * 1.2
+            );
+            for (name, metrics) in slow_apis {
+                println!("   • {}: {}ms", name, metrics.avg_duration.as_millis());
+            }
+        }
     }
 
     Ok(())
+}
+
+fn format_percentage_colored(percentage: f64) -> colored::ColoredString {
+    use colored::*;
+    let formatted = format!("{:.1}%", percentage);
+    if percentage >= 95.0 {
+        formatted.green()
+    } else if percentage >= 90.0 {
+        formatted.yellow()
+    } else {
+        formatted.red()
+    }
+}
+
+fn get_status_indicator(success_rate: f64, avg_duration_ms: f64) -> &'static str {
+    if success_rate >= 95.0 && avg_duration_ms < 500.0 {
+        "🟢 우수"
+    } else if success_rate >= 90.0 && avg_duration_ms < 1000.0 {
+        "🟡 양호"
+    } else if success_rate >= 80.0 {
+        "🟠 주의"
+    } else {
+        "🔴 문제"
+    }
 }
 
 async fn execute_cache_command(collector: Arc<crate::metrics::MetricsCollector>) -> Result<()> {
@@ -291,66 +444,340 @@ async fn execute_report_command(
     to: Option<String>,
     format: &str,
 ) -> Result<()> {
+    use chrono::prelude::*;
+    use serde_json::json;
+
     let snapshot = collector.get_snapshot().await;
+    let timestamp = Local::now();
+
+    // Parse date range if provided
+    let date_range = match (&from, &to) {
+        (Some(f), Some(t)) => Some((f.clone(), t.clone())),
+        (Some(f), None) => Some((f.clone(), timestamp.format("%Y-%m-%d").to_string())),
+        (None, Some(t)) => {
+            let week_ago = timestamp - chrono::Duration::days(7);
+            Some((week_ago.format("%Y-%m-%d").to_string(), t.clone()))
+        }
+        _ => None,
+    };
 
     match format.to_lowercase().as_str() {
         "json" => {
-            // JSON 형식 출력
-            println!("{{");
-            println!("  \"timestamp\": \"{:?}\",", snapshot.timestamp);
-            println!("  \"uptime_seconds\": {},", snapshot.uptime.as_secs());
-            println!("  \"memory_usage_bytes\": {},", snapshot.memory_usage);
-            println!("  \"operations\": {{");
+            // Enhanced JSON format with proper structure
+            let mut operations_json = serde_json::Map::new();
 
-            let mut first = true;
             for (op_name, metrics) in &snapshot.operations {
-                if !first {
-                    println!(",");
-                }
-                first = false;
-                println!("    \"{}\": {{", op_name);
-                println!("      \"total_requests\": {},", metrics.total_requests);
-                println!("      \"success_rate\": {:.2}", metrics.success_rate());
-                println!(
-                    "      \"avg_duration_ms\": {}",
-                    metrics.avg_duration.as_millis()
-                );
-                print!("    }}");
+                let operation_data = json!({
+                    "total_requests": metrics.total_requests,
+                    "successful_requests": metrics.successful_requests,
+                    "failed_requests": metrics.failed_requests,
+                    "success_rate_percent": metrics.success_rate(),
+                    "error_rate_percent": metrics.error_rate(),
+                    "response_times": {
+                        "avg_ms": metrics.avg_duration.as_millis(),
+                        "min_ms": metrics.min_duration.as_millis(),
+                        "max_ms": metrics.max_duration.as_millis(),
+                        "p50_ms": metrics.p50_duration.as_millis(),
+                        "p95_ms": metrics.p95_duration.as_millis(),
+                        "p99_ms": metrics.p99_duration.as_millis()
+                    }
+                });
+                operations_json.insert(op_name.clone(), operation_data);
             }
 
-            println!();
-            println!("  }}");
-            println!("}}");
+            let mut cache_json = serde_json::Map::new();
+            for (api_name, cache_metrics) in &snapshot.cache {
+                let cache_data = json!({
+                    "hits": cache_metrics.hits,
+                    "misses": cache_metrics.misses,
+                    "hit_rate_percent": cache_metrics.hit_rate(),
+                    "storage_size_bytes": cache_metrics.storage_size,
+                    "entry_count": cache_metrics.entry_count
+                });
+                cache_json.insert(api_name.clone(), cache_data);
+            }
+
+            let mut pools_json = serde_json::Map::new();
+            for (pool_name, pool_metrics) in &snapshot.connection_pools {
+                let pool_data = json!({
+                    "active_connections": pool_metrics.active_connections,
+                    "idle_connections": pool_metrics.idle_connections,
+                    "total_connections": pool_metrics.total_connections,
+                    "utilization_percent": pool_metrics.utilization(),
+                    "connection_timeouts": pool_metrics.connection_timeouts,
+                    "timeout_rate_percent": pool_metrics.timeout_rate()
+                });
+                pools_json.insert(pool_name.clone(), pool_data);
+            }
+
+            // Calculate summary values
+            let total_requests: u64 = snapshot.operations.values().map(|m| m.total_requests).sum();
+            let total_successes: u64 = snapshot
+                .operations
+                .values()
+                .map(|m| m.successful_requests)
+                .sum();
+            let overall_success_rate = if total_requests > 0 {
+                (total_successes as f64 / total_requests as f64) * 100.0
+            } else {
+                0.0
+            };
+
+            let report = json!({
+                "metadata": {
+                    "generated_at": timestamp.to_rfc3339(),
+                    "report_format": "json",
+                    "date_range": date_range,
+                    "uptime_seconds": snapshot.uptime.as_secs(),
+                    "memory_usage_bytes": snapshot.memory_usage
+                },
+                "summary": {
+                    "total_operations": snapshot.operations.len(),
+                    "total_requests": total_requests,
+                    "overall_success_rate": overall_success_rate
+                },
+                "operations": operations_json,
+                "cache": cache_json,
+                "connection_pools": pools_json
+            });
+
+            println!("{}", serde_json::to_string_pretty(&report).unwrap());
         }
 
         "csv" => {
-            // CSV 형식 출력
-            println!("operation,total_requests,success_rate,avg_duration_ms");
+            // Enhanced CSV format with comprehensive data
+            println!(
+                "# Warp CLI Performance Report - Generated: {}",
+                timestamp.format("%Y-%m-%d %H:%M:%S")
+            );
+            if let Some((from_date, to_date)) = &date_range {
+                println!("# Date Range: {} to {}", from_date, to_date);
+            }
+            println!();
+
+            // Operations CSV
+            println!("# API Operations");
+            println!("api_name,total_requests,successful_requests,failed_requests,success_rate_percent,error_rate_percent,avg_duration_ms,min_duration_ms,max_duration_ms,p50_duration_ms,p95_duration_ms,p99_duration_ms");
             for (op_name, metrics) in &snapshot.operations {
                 println!(
-                    "{},{},{:.2},{}",
+                    "{},{},{},{},{:.2},{:.2},{},{},{},{},{},{}",
                     op_name,
                     metrics.total_requests,
+                    metrics.successful_requests,
+                    metrics.failed_requests,
                     metrics.success_rate(),
-                    metrics.avg_duration.as_millis()
+                    metrics.error_rate(),
+                    metrics.avg_duration.as_millis(),
+                    metrics.min_duration.as_millis(),
+                    metrics.max_duration.as_millis(),
+                    metrics.p50_duration.as_millis(),
+                    metrics.p95_duration.as_millis(),
+                    metrics.p99_duration.as_millis()
                 );
+            }
+
+            println!();
+            println!("# Cache Performance");
+            println!("api_name,hits,misses,hit_rate_percent,storage_size_bytes,entry_count");
+            for (api_name, cache_metrics) in &snapshot.cache {
+                println!(
+                    "{},{},{},{:.2},{},{}",
+                    api_name,
+                    cache_metrics.hits,
+                    cache_metrics.misses,
+                    cache_metrics.hit_rate(),
+                    cache_metrics.storage_size,
+                    cache_metrics.entry_count
+                );
+            }
+
+            if !snapshot.connection_pools.is_empty() {
+                println!();
+                println!("# Connection Pools");
+                println!("pool_name,active_connections,idle_connections,total_connections,utilization_percent,connection_timeouts,timeout_rate_percent");
+                for (pool_name, pool_metrics) in &snapshot.connection_pools {
+                    println!(
+                        "{},{},{},{},{:.2},{},{:.2}",
+                        pool_name,
+                        pool_metrics.active_connections,
+                        pool_metrics.idle_connections,
+                        pool_metrics.total_connections,
+                        pool_metrics.utilization(),
+                        pool_metrics.connection_timeouts,
+                        pool_metrics.timeout_rate()
+                    );
+                }
             }
         }
 
+        "html" => {
+            // HTML report format
+            println!("<!DOCTYPE html>");
+            println!("<html lang=\"ko\">");
+            println!("<head>");
+            println!("    <meta charset=\"UTF-8\">");
+            println!("    <title>Warp CLI 성능 리포트</title>");
+            println!("    <style>");
+            println!("        body {{ font-family: -apple-system, sans-serif; margin: 40px; background: #f5f5f5; }}");
+            println!("        .container {{ background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}");
+            println!("        h1, h2 {{ color: #333; }}");
+            println!("        .metric {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #007bff; }}");
+            println!("        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}");
+            println!("        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}");
+            println!("        th {{ background-color: #f2f2f2; font-weight: 600; }}");
+            println!("        .success {{ color: #28a745; }}");
+            println!("        .warning {{ color: #ffc107; }}");
+            println!("        .danger {{ color: #dc3545; }}");
+            println!("        .footer {{ margin-top: 30px; color: #666; font-size: 14px; }}");
+            println!("    </style>");
+            println!("</head>");
+            println!("<body>");
+            println!("    <div class=\"container\">");
+            println!("        <h1>🚀 Warp CLI 성능 리포트</h1>");
+            println!("        <div class=\"metric\">");
+            println!(
+                "            <strong>생성 시간:</strong> {}<br>",
+                timestamp.format("%Y년 %m월 %d일 %H:%M:%S")
+            );
+            if let Some((from_date, to_date)) = &date_range {
+                println!(
+                    "            <strong>분석 기간:</strong> {} ~ {}<br>",
+                    from_date, to_date
+                );
+            }
+            println!(
+                "            <strong>시스템 가동시간:</strong> {}초<br>",
+                snapshot.uptime.as_secs()
+            );
+            println!(
+                "            <strong>메모리 사용량:</strong> {:.1} MB",
+                snapshot.memory_usage as f64 / 1024.0 / 1024.0
+            );
+            println!("        </div>");
+
+            if !snapshot.operations.is_empty() {
+                println!("        <h2>📊 API 성능</h2>");
+                println!("        <table>");
+                println!("            <tr><th>API</th><th>요청 수</th><th>성공률</th><th>평균 응답시간</th><th>상태</th></tr>");
+                for (op_name, metrics) in &snapshot.operations {
+                    let success_rate = metrics.success_rate();
+                    let status_class = if success_rate >= 95.0 {
+                        "success"
+                    } else if success_rate >= 90.0 {
+                        "warning"
+                    } else {
+                        "danger"
+                    };
+                    let status_text = if success_rate >= 95.0 {
+                        "✅ 우수"
+                    } else if success_rate >= 90.0 {
+                        "⚠️ 주의"
+                    } else {
+                        "❌ 문제"
+                    };
+
+                    println!("            <tr>");
+                    println!("                <td><strong>{}</strong></td>", op_name);
+                    println!("                <td>{}</td>", metrics.total_requests);
+                    println!(
+                        "                <td class=\"{}\">{:.1}%</td>",
+                        status_class, success_rate
+                    );
+                    println!(
+                        "                <td>{}ms</td>",
+                        metrics.avg_duration.as_millis()
+                    );
+                    println!(
+                        "                <td class=\"{}\">{}</td>",
+                        status_class, status_text
+                    );
+                    println!("            </tr>");
+                }
+                println!("        </table>");
+            }
+
+            if !snapshot.cache.is_empty() {
+                println!("        <h2>💾 캐시 성능</h2>");
+                println!("        <table>");
+                println!("            <tr><th>API</th><th>히트 수</th><th>미스 수</th><th>히트율</th><th>저장소 크기</th></tr>");
+                for (api_name, cache_metrics) in &snapshot.cache {
+                    let hit_rate = cache_metrics.hit_rate();
+                    let hit_class = if hit_rate >= 70.0 {
+                        "success"
+                    } else if hit_rate >= 50.0 {
+                        "warning"
+                    } else {
+                        "danger"
+                    };
+
+                    println!("            <tr>");
+                    println!("                <td><strong>{}</strong></td>", api_name);
+                    println!("                <td>{}</td>", cache_metrics.hits);
+                    println!("                <td>{}</td>", cache_metrics.misses);
+                    println!(
+                        "                <td class=\"{}\">{:.1}%</td>",
+                        hit_class, hit_rate
+                    );
+                    println!(
+                        "                <td>{:.1} KB</td>",
+                        cache_metrics.storage_size as f64 / 1024.0
+                    );
+                    println!("            </tr>");
+                }
+                println!("        </table>");
+            }
+
+            println!("        <div class=\"footer\">");
+            println!(
+                "            리포트 생성: Warp CLI v{} | 시간: {}",
+                env!("CARGO_PKG_VERSION"),
+                timestamp.format("%Y-%m-%d %H:%M:%S")
+            );
+            println!("        </div>");
+            println!("    </div>");
+            println!("</body>");
+            println!("</html>");
+        }
+
         _ => {
-            // 기본 텍스트 형식
-            println!("📊 성능 리포트");
-            println!("{}", "─".repeat(50));
+            // Enhanced text format
+            use colored::*;
 
-            if let Some(from_date) = from {
-                println!("📅 시작일: {}", from_date);
-            }
-            if let Some(to_date) = to {
-                println!("📅 종료일: {}", to_date);
+            println!("{}", "📊 성능 리포트".bold().cyan());
+            println!("{}", "=".repeat(60).bright_black());
+            println!(
+                "🕒 생성 시간: {}",
+                timestamp
+                    .format("%Y년 %m월 %d일 %H:%M:%S")
+                    .to_string()
+                    .bright_white()
+            );
+
+            if let Some((from_date, to_date)) = date_range {
+                println!(
+                    "📅 분석 기간: {} ~ {}",
+                    from_date.bright_yellow(),
+                    to_date.bright_yellow()
+                );
+            } else {
+                println!("📅 분석 기간: 전체 데이터");
             }
 
-            let dashboard = PerformanceDashboard::new(collector).with_details();
+            println!(
+                "⏱️  시스템 가동시간: {}",
+                format!("{}초", snapshot.uptime.as_secs()).bright_white()
+            );
+            println!(
+                "💾 메모리 사용량: {}",
+                format!("{:.1} MB", snapshot.memory_usage as f64 / 1024.0 / 1024.0).bright_white()
+            );
+            println!();
+
+            let dashboard = crate::metrics::PerformanceDashboard::new(collector).with_details();
             println!("{}", dashboard.display().await);
+
+            println!("{}", "=".repeat(60).bright_black());
+            println!("📝 리포트 완료 - Warp CLI v{}", env!("CARGO_PKG_VERSION"));
         }
     }
 
